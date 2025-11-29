@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import Navigation from "./components/navigation";
+import Sidebar from "./components/sidebar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Personal Blog",
-  description: "My personal blog and projects",
+  title: "Abhinav Malkoochi",
+  description: "CS student at UTD, founding engineer, builder.",
 };
 
 export default function RootLayout({
@@ -25,13 +27,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-zinc-950`}
-      >
-        <Navigation />
-        <main className="w-full max-w-3xl mx-auto px-6 py-8">
-          {children}
-        </main>
+      <body className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}>
+        <div className="flex min-h-screen">
+          <Sidebar />
+          <main className="flex-1 notion-page">
+            {children}
+          </main>
+        </div>
       </body>
     </html>
   );

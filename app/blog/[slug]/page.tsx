@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import Link from 'next/link';
 import matter from 'gray-matter';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 
@@ -22,6 +23,11 @@ async function getBlogPost(slug: string) {
 
 export async function generateStaticParams() {
     const blogDir = path.join(process.cwd(), 'content/blogs');
+    
+    if (!fs.existsSync(blogDir)) {
+        return [];
+    }
+    
     const files = fs.readdirSync(blogDir);
 
     return files
@@ -36,31 +42,29 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     const { frontmatter, content } = await getBlogPost(slug);
 
     return (
-        <article className="space-y-8">
-            <header className="space-y-4 border-b border-zinc-200 dark:border-zinc-800 pb-8">
-                <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100">
-                    {frontmatter.title || slug}
-                </h1>
+        <div className="notion-content">
+            <div className="animate-in">
+                <Link
+                    href="/blog"
+                    className="text-sm text-muted hover:text-foreground transition-colors mb-6 inline-block"
+                >
+                    ← Writing
+                </Link>
+                <h1 className="notion-title">{frontmatter.title || slug}</h1>
                 {frontmatter.date && (
-                    <time className="text-sm text-zinc-500 dark:text-zinc-500">
+                    <p className="notion-subtitle">
                         {new Date(frontmatter.date).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
                         })}
-                    </time>
-                )}
-                {frontmatter.description && (
-                    <p className="text-lg text-zinc-600 dark:text-zinc-400">
-                        {frontmatter.description}
                     </p>
                 )}
-            </header>
+            </div>
 
-            <div className="prose prose-zinc dark:prose-invert max-w-none">
+            <div className="prose-custom animate-in delay-1">
                 <MDXRemote source={content} />
             </div>
-        </article>
+        </div>
     );
 }
-

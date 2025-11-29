@@ -9,10 +9,11 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-
+mcp.config.json
+.cursor/
 # testing
 /coverage
-
+servers/
 # next.js
 /.next/
 /out/

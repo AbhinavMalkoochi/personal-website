@@ -12,6 +12,11 @@ interface BlogPost {
 
 function getBlogPosts(): BlogPost[] {
     const blogDir = path.join(process.cwd(), 'content/blogs');
+    
+    if (!fs.existsSync(blogDir)) {
+        return [];
+    }
+    
     const files = fs.readdirSync(blogDir);
 
     const posts = files
@@ -38,45 +43,47 @@ export default function BlogPage() {
     const posts = getBlogPosts();
 
     return (
-        <div className="space-y-8">
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-                Blog
-            </h1>
-
-            {posts.length === 0 ? (
-                <p className="text-zinc-600 dark:text-zinc-400">
-                    No blog posts yet.
+        <div className="notion-content">
+            <div className="animate-in">
+                <h1 className="notion-title">Writing</h1>
+                <p className="notion-subtitle">
+                    Notes, thoughts, and technical writing.
                 </p>
-            ) : (
-                <div className="space-y-8">
-                    {posts.map(post => (
-                        <Link
-                            key={post.slug}
-                            href={`/blog/${post.slug}`}
-                            className="block group"
-                        >
-                            <article className="space-y-2">
-                                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600 dark:group-hover:text-zinc-400 transition-colors">
-                                    {post.title}
-                                </h2>
-                                <time className="text-sm text-zinc-500 dark:text-zinc-500">
-                                    {new Date(post.date).toLocaleDateString('en-US', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                    })}
-                                </time>
+            </div>
+
+            <div className="animate-in delay-1">
+                {posts.length === 0 ? (
+                    <p className="text-muted">
+                        No posts yet.
+                    </p>
+                ) : (
+                    <div className="space-y-3">
+                        {posts.map(post => (
+                            <Link
+                                key={post.slug}
+                                href={`/blog/${post.slug}`}
+                                className="notion-card"
+                            >
+                                <div className="flex justify-between items-baseline gap-4">
+                                    <div className="notion-card-title">{post.title}</div>
+                                    <time className="text-xs text-muted flex-shrink-0">
+                                        {new Date(post.date).toLocaleDateString('en-US', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: 'numeric',
+                                        })}
+                                    </time>
+                                </div>
                                 {post.description && (
-                                    <p className="text-zinc-600 dark:text-zinc-400">
+                                    <p className="notion-card-desc mt-1">
                                         {post.description}
                                     </p>
                                 )}
-                            </article>
-                        </Link>
-                    ))}
-                </div>
-            )}
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
-
