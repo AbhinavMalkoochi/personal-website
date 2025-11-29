@@ -24,7 +24,7 @@ export default function McpcodePage() {
             npm
           </a>
           <a
-            href="https://github.com/AbhinavMalkoochi/mcpcode"
+            href="https://github.com/AbhinavMalkoochi/code-mcp"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-muted hover:text-foreground transition-colors underline underline-offset-2"
@@ -37,21 +37,21 @@ export default function McpcodePage() {
       <div className="prose-custom animate-in delay-1">
         <h2>Overview</h2>
         <p>
-          mcpcode generates type-safe TypeScript wrappers for MCP (Model Context Protocol) 
-          servers. Instead of loading all tool definitions into an agent's context window, 
+          mcpcode generates type-safe TypeScript wrappers for MCP (Model Context Protocol)
+          servers. Instead of loading all tool definitions into an agent's context window,
           the generated code can be imported on-demand, reducing token usage by up to 98%.
         </p>
 
         <h2>Problem</h2>
         <p>
-          When connecting agents to multiple MCP servers, loading all tool definitions 
-          upfront consumes significant context. This limits the number of tools an agent 
+          When connecting agents to multiple MCP servers, loading all tool definitions
+          upfront consumes significant context. This limits the number of tools an agent
           can access and increases costs.
         </p>
 
         <h2>Solution</h2>
         <p>
-          mcpcode reads your MCP server configuration and generates TypeScript modules 
+          mcpcode reads your MCP server configuration and generates TypeScript modules
           for each server. Agents can then:
         </p>
         <ul>
@@ -66,9 +66,9 @@ export default function McpcodePage() {
           Install the CLI tool and run it against your <code>mcp.config.json</code>:
         </p>
         <pre><code>npm install -g @abmalk/mcpcode
-mcpcode generate</code></pre>
+          mcpcode generate</code></pre>
         <p>
-          This generates a <code>servers/</code> directory with typed functions for each 
+          This generates a <code>servers/</code> directory with typed functions for each
           tool. Import and call them directly in your agent code.
         </p>
 
