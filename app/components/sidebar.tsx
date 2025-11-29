@@ -38,7 +38,7 @@ export default function Sidebar() {
       <div className="mt-auto px-3 py-4">
         <div className="flex gap-4">
           <a
-            href="https://github.com/abmalk"
+            href="https://github.com/AbhinavMalkoochi"
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted hover:text-foreground transition-colors"

@@ -16,7 +16,7 @@ export default function BrowserAgentPage() {
         </p>
         <div className="flex gap-4 mb-8">
           <a
-            href="https://github.com/abmalk/browser-agent"
+            href="https://github.com/AbhinavMalkoochi/browser-agent"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-muted hover:text-foreground transition-colors underline underline-offset-2"
