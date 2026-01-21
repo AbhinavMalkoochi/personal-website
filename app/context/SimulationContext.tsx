@@ -1,44 +1,33 @@
 "use client";
 
-import { createContext, useContext, useState, useSyncExternalStore, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
+
+export type AnimationMode = "off" | "boids" | "lorenz";
 
 interface SimulationContextType {
-    isPaused: boolean;
-    togglePause: () => void;
+    mode: AnimationMode;
+    setMode: (mode: AnimationMode) => void;
 }
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
 
-function getStoredPausedState(): boolean {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("sim-paused") === "true";
-}
-
-function subscribe(callback: () => void): () => void {
-    window.addEventListener("storage", callback);
-    return () => window.removeEventListener("storage", callback);
-}
-
-function getServerSnapshot(): boolean {
-    return false;
+function getInitialMode(): AnimationMode {
+    if (typeof window === "undefined") return "boids";
+    const stored = localStorage.getItem("sim-mode");
+    if (stored === "off" || stored === "lorenz") return stored;
+    return "boids";
 }
 
 export function SimulationProvider({ children }: { children: ReactNode }) {
-    const storedValue = useSyncExternalStore(subscribe, getStoredPausedState, getServerSnapshot);
-    const [localPaused, setLocalPaused] = useState(false);
-    const [hasLocalOverride, setHasLocalOverride] = useState(false);
+    const [mode, setModeState] = useState<AnimationMode>(getInitialMode);
 
-    const isPaused = hasLocalOverride ? localPaused : storedValue;
-
-    const togglePause = useCallback(() => {
-        const newState = !isPaused;
-        localStorage.setItem("sim-paused", String(newState));
-        setLocalPaused(newState);
-        setHasLocalOverride(true);
-    }, [isPaused]);
+    const setMode = (newMode: AnimationMode) => {
+        localStorage.setItem("sim-mode", newMode);
+        setModeState(newMode);
+    };
 
     return (
-        <SimulationContext.Provider value={{ isPaused, togglePause }}>
+        <SimulationContext.Provider value={{ mode, setMode }}>
             {children}
         </SimulationContext.Provider>
     );

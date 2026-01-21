@@ -1,0 +1,12 @@
+---
+name: "MCP Code"
+summary: "On-demand tool loading for AI agents"
+tech: ["TypeScript", "AI", "MCP"]
+githubUrl: "https://github.com/AbhinavMalkoochi/mcp-code"
+---
+
+Built on Anthropic's research showing 90% context reduction through MCP code execution, this project transforms MCP servers into progressively discoverable TypeScript files.
+
+The system converts MCP servers into a standardized format: each server gets added to a servers folder with corresponding TS files that catalog available tools. These files act as lightweight wrappers, calling the underlying MCP server via stdio while maintaining clean function documentation headers.
+
+This approach enables LLMs to discover and load tools on-demand through file system traversal, dramatically reducing the context window needed for agent operations.
