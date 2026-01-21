@@ -1,12 +1,20 @@
 ---
 name: "Browser Agent"
-summary: "Autonomous browser control for LLMs"
+summary: "Autonomous browser control for LLMs."
 tech: ["TypeScript", "Python", "CDP"]
 githubUrl: "https://github.com/AbhinavMalkoochi/browser-agent"
 ---
 
-A ground-up implementation of browser automation for LLMs, built to investigate why existing solutions consistently fail at seemingly simple tasks.
+Tried building a browser use agent from scratch in Python. Other browser use libraries kept breaking at simple steps so I wanted to investigate the bottleneck.
 
-After comparing this implementation against leading browser automation libraries, the results revealed an important insight: all approaches achieved nearly identical failure rates, speeds, and task completion metrics. This suggests the bottleneck isn't in the tooling but in how LLMs fundamentally parse and understand web interfaces.
+<br/>
 
-The real solution likely requires a new abstraction layer or modality for representing browser state. Next steps include using Claude Code to experiment with novel ways of exposing DOM information and potentially developing a specialized language for browser-LLM interaction.
+When I compared my solution to the best libraries, they surprisingly had near exact same failures, speed, and task completion rate.
+
+<br/>
+
+Maybe there is a fundamental issue with how LLMs understand websites and maybe another abstraction or modality is needed to solve this problem.
+
+<br/>
+
+A good future step is to let Claude Code run in the background to experiment with different ways to expose browser state to LLMs and develop a new language.

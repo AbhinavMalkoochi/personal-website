@@ -88,19 +88,19 @@ const updateFlowParticle = (
     const index = xCol + yRow * cols;
     let angle = flowField[index] || 0;
 
-    // Mouse repulsion
+    // Mouse repulsion - stronger effect
     if (mouse.active) {
         const dx = mouse.x - p.x;
         const dy = mouse.y - p.y;
         const distSq = dx * dx + dy * dy;
-        const radius = 12000;
+        const radius = 25000; // Increased radius for wider repulsion area
 
         if (distSq < radius) {
             const angleToMouse = Math.atan2(dy, dx);
             const force = (radius - distSq) / radius;
             angle = angleToMouse + Math.PI;
-            p.vx += Math.cos(angle) * 0.12 * force;
-            p.vy += Math.sin(angle) * 0.12 * force;
+            p.vx += Math.cos(angle) * 0.35 * force; // Increased force for stronger repulsion
+            p.vy += Math.sin(angle) * 0.35 * force;
         }
     }
 
