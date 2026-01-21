@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export default function ResumePage() {
     return (
         <div className="section-wrapper max-w-3xl mx-auto">
@@ -38,7 +36,7 @@ export default function ResumePage() {
                             <h3>Full Stack Intern</h3>
                             <span className="date">Feb 2025 – Jul 2025</span>
                         </div>
-                        <p className="company">'Sup · Remote</p>
+                        <p className="company">&apos;Sup · Remote</p>
                         <ul>
                             <li>Engineered a robust web scraping system using Python and Selenium to extract and analyze data from 30,000+ LinkedIn profiles, boosting targeted outreach efficiency by 40%.</li>
                             <li>Developed an AI-driven cold email automation pipeline with Next.js that leveraged enriched data to generate personalized messages, increasing engagement rates by 35% and cutting manual outreach time by 50%.</li>

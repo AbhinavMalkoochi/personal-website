@@ -42,7 +42,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     const { frontmatter, content } = await getBlogPost(slug);
 
     return (
-        <div className="notion-content">
+        <div className="blog-content">
             <div className="animate-in">
                 <Link
                     href="/blog"
@@ -50,9 +50,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 >
                     ← Writing
                 </Link>
-                <h1 className="notion-title">{frontmatter.title || slug}</h1>
+                <h1 className="blog-title">{frontmatter.title || slug}</h1>
                 {frontmatter.date && (
-                    <p className="notion-subtitle">
+                    <p className="blog-subtitle">
                         {new Date(frontmatter.date).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',

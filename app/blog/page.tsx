@@ -43,10 +43,10 @@ export default function BlogPage() {
     const posts = getBlogPosts();
 
     return (
-        <div className="notion-content">
+        <div className="blog-content">
             <div className="animate-in">
-                <h1 className="notion-title">Writing</h1>
-                <p className="notion-subtitle">
+                <h1 className="blog-title">Writing</h1>
+                <p className="blog-subtitle">
                     Notes, thoughts, and technical writing.
                 </p>
             </div>
@@ -62,10 +62,10 @@ export default function BlogPage() {
                             <Link
                                 key={post.slug}
                                 href={`/blog/${post.slug}`}
-                                className="notion-card"
+                                className="blog-card"
                             >
                                 <div className="flex justify-between items-baseline gap-4">
-                                    <div className="notion-card-title">{post.title}</div>
+                                    <div className="blog-card-title">{post.title}</div>
                                     <time className="text-xs text-muted flex-shrink-0">
                                         {new Date(post.date).toLocaleDateString('en-US', {
                                             month: 'short',
@@ -75,7 +75,7 @@ export default function BlogPage() {
                                     </time>
                                 </div>
                                 {post.description && (
-                                    <p className="notion-card-desc mt-1">
+                                    <p className="blog-card-desc mt-1">
                                         {post.description}
                                     </p>
                                 )}

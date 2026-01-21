@@ -6,12 +6,12 @@ export default function AboutPage() {
 
                 <div className="space-y-6 text-body">
                     <p>
-                        I'm a Computer Science graduate from UT Dallas. My focus is on AI infrastructure,
+                        I&apos;m a Computer Science graduate from UT Dallas. My focus is on AI infrastructure,
                         specifically LLM tooling, browser automation, and building systems that help
                         developers work more efficiently.
                     </p>
                     <p>
-                        I've worked as a founding engineer at two startups where I built everything from
+                        I&apos;ve worked as a founding engineer at two startups where I built everything from
                         web scraping pipelines to AI-driven automation tools. I enjoy solving hard technical
                         problems and shipping production-ready code.
                     </p>

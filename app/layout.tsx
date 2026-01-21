@@ -32,12 +32,10 @@ export default function RootLayout({
       <body className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}>
         <SimulationProvider>
           <InteractiveBackground />
-          <div className="canvas-frame">
-            <Navbar />
-            <main className="main-content">
-              {children}
-            </main>
-          </div>
+          <Navbar />
+          <main className="main-content">
+            {children}
+          </main>
         </SimulationProvider>
       </body>
     </html>

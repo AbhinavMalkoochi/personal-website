@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useSyncExternalStore, useCallback, type ReactNode } from "react";
 
 interface SimulationContextType {
     isPaused: boolean;
@@ -9,22 +9,33 @@ interface SimulationContextType {
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
 
-export function SimulationProvider({ children }: { children: React.ReactNode }) {
-    const [isPaused, setIsPaused] = useState(false);
+function getStoredPausedState(): boolean {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("sim-paused") === "true";
+}
 
-    // Optional: Persist preference
-    useEffect(() => {
-        const saved = localStorage.getItem("sim-paused");
-        if (saved) setIsPaused(saved === "true");
-    }, []);
+function subscribe(callback: () => void): () => void {
+    window.addEventListener("storage", callback);
+    return () => window.removeEventListener("storage", callback);
+}
 
-    const togglePause = () => {
-        setIsPaused((prev) => {
-            const newState = !prev;
-            localStorage.setItem("sim-paused", String(newState));
-            return newState;
-        });
-    };
+function getServerSnapshot(): boolean {
+    return false;
+}
+
+export function SimulationProvider({ children }: { children: ReactNode }) {
+    const storedValue = useSyncExternalStore(subscribe, getStoredPausedState, getServerSnapshot);
+    const [localPaused, setLocalPaused] = useState(false);
+    const [hasLocalOverride, setHasLocalOverride] = useState(false);
+
+    const isPaused = hasLocalOverride ? localPaused : storedValue;
+
+    const togglePause = useCallback(() => {
+        const newState = !isPaused;
+        localStorage.setItem("sim-paused", String(newState));
+        setLocalPaused(newState);
+        setHasLocalOverride(true);
+    }, [isPaused]);
 
     return (
         <SimulationContext.Provider value={{ isPaused, togglePause }}>
@@ -35,8 +46,8 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
 
 export function useSimulation() {
     const context = useContext(SimulationContext);
-    if (context === undefined) {
-        throw new Error("useSimulation must be used within a SimulationProvider");
+    if (!context) {
+        throw new Error("useSimulation must be used within SimulationProvider");
     }
     return context;
 }
