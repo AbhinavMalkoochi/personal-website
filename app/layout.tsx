@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "./components/sidebar";
+import InteractiveBackground from "./components/InteractiveBackground";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -16,8 +17,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Abhinav Malkoochi",
-  description: "CS student at UTD, founding engineer, builder.",
+  title: "Abhinav Malkoochi | CS @ UTD",
+  description: "CS student at UT Dallas, founding engineer at startups. Building at the intersection of AI, math, and elegant code.",
 };
 
 export default function RootLayout({
@@ -28,9 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}>
+        <InteractiveBackground />
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 notion-page">
+          <main className="main-content flex-1">
             {children}
           </main>
         </div>
