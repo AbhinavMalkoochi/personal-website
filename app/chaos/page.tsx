@@ -1,51 +1,21 @@
 export default function ChaosPage() {
     return (
-        <div className="section-wrapper items-center justify-center">
-            <div className="animate-in text-center mb-8">
-                <h1 className="section-title mb-4">Lorenz System</h1>
-                <p className="text-body max-w-md mx-auto">
-                    A chaotic system of differential equations.
+        <div className="section-wrapper h-screen flex flex-col justify-end pb-24 pointer-events-none">
+            {/* Content strictly at bottom to avoid blocking animation */}
+            <div className="animate-reveal pointer-events-auto max-w-md mx-auto text-center backdrop-blur-sm bg-black/30 p-6 rounded-lg border border-white/5">
+                <h1 className="font-serif text-3xl italic text-white mb-2">Lorenz System</h1>
+                <p className="text-neutral-400 text-sm font-sans mb-4">
+                    A chaotic system of ordinary differential equations.
                     <br />
-                    <span className="text-sm text-neutral-500">Interact to rotate.</span>
+                    <span className="text-amber-400 text-xs uppercase tracking-widest mt-2 block">
+                        Drag to Rotate
+                    </span>
                 </p>
-            </div>
 
-            <div className="animate-in delay-1 max-w-lg w-full">
-                <div className="glass p-8 rounded-3xl backdrop-blur-xl border border-white/5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div>
-                            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Equations</h3>
-                            <div className="font-mono text-xs text-neutral-400 space-y-2">
-                                <p>dx/dt = σ(y - x)</p>
-                                <p>dy/dt = x(ρ - z) - y</p>
-                                <p>dz/dt = xy - βz</p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Simulation</h3>
-                            <div className="text-xs text-neutral-400 space-y-2">
-                                <div className="flex justify-between">
-                                    <span>σ (Sigma)</span>
-                                    <span className="text-white">10</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>ρ (Rho)</span>
-                                    <span className="text-white">28</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>β (Beta)</span>
-                                    <span className="text-white">8/3</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-8 pt-6 border-t border-white/5 text-center">
-                        <p className="text-xs text-neutral-600">
-                            Butterfly Effect: Sensitive dependence on initial conditions.
-                        </p>
-                    </div>
+                <div className="flex justify-center gap-6 text-xs font-mono text-neutral-600">
+                    <span>σ = 10</span>
+                    <span>ρ = 28</span>
+                    <span>β = 8/3</span>
                 </div>
             </div>
         </div>

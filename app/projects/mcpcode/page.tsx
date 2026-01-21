@@ -1,87 +1,41 @@
-import Link from "next/link";
-
-export default function McpcodePage() {
+export default function McpCodePage() {
   return (
-    <div className="notion-content">
-      <div className="animate-in">
-        <Link
-          href="/projects"
-          className="text-sm text-muted hover:text-foreground transition-colors mb-6 inline-block"
-        >
-          ← Projects
-        </Link>
-        <h1 className="notion-title">mcpcode</h1>
-        <p className="notion-subtitle">
-          TypeScript code generation for MCP servers
-        </p>
-        <div className="flex gap-4 mb-8">
-          <a
-            href="https://www.npmjs.com/package/@abmalk/mcpcode"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-muted hover:text-foreground transition-colors underline underline-offset-2"
-          >
-            npm
-          </a>
-          <a
-            href="https://github.com/AbhinavMalkoochi/code-mcp"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-muted hover:text-foreground transition-colors underline underline-offset-2"
-          >
-            github
-          </a>
+    <div className="section-wrapper">
+      <div className="painting-frame animate-reveal max-w-4xl mx-auto">
+        <div className="mb-12 text-center">
+          <h1 className="gallery-title mb-4">MCP Code</h1>
+          <p className="text-neutral-400 font-serif italic text-lg">
+            On-demand tool loading for AI agents.
+          </p>
         </div>
-      </div>
 
-      <div className="prose-custom animate-in delay-1">
-        <h2>Overview</h2>
-        <p>
-          mcpcode generates type-safe TypeScript wrappers for MCP (Model Context Protocol)
-          servers. Instead of loading all tool definitions into an agent's context window,
-          the generated code can be imported on-demand, reducing token usage by up to 98%.
-        </p>
+        <div className="prose prose-invert prose-lg mx-auto text-neutral-300 leading-loose font-sans">
+          <p className="first-letter:text-5xl first-letter:font-serif first-letter:text-amber-400 first-letter:mr-2 float-left">
+            M
+          </p>
+          <p>
+            CP Code is a TypeScript system architected to solve the context bottleneck in AI agent workflows.
+            By enabling agents to load Model Context Protocol (MCP) tools on-demand, it reduces context usage
+            by <strong>90%</strong> compared to direct tool calls.
+          </p>
 
-        <h2>Problem</h2>
-        <p>
-          When connecting agents to multiple MCP servers, loading all tool definitions
-          upfront consumes significant context. This limits the number of tools an agent
-          can access and increases costs.
-        </p>
+          <h3 className="text-white font-serif mt-12 mb-6 text-2xl">Key Engineering</h3>
+          <ul className="list-disc pl-6 space-y-4 marker:text-amber-400">
+            <li>
+              <strong>Context Efficiency:</strong> Implemented code-execution workflows that filter large datasets
+              before they reach the model, cutting token overhead by 50–95%.
+            </li>
+            <li>
+              <strong>Filesystem Interface:</strong> Created a unified filesystem-based interface for accessing
+              dozens of MCP servers, significantly improving tool discovery speed and developer experience.
+            </li>
+          </ul>
 
-        <h2>Solution</h2>
-        <p>
-          mcpcode reads your MCP server configuration and generates TypeScript modules
-          for each server. Agents can then:
-        </p>
-        <ul>
-          <li>Import only the tools they need</li>
-          <li>Process data in code before returning results</li>
-          <li>Use familiar programming constructs</li>
-          <li>Keep intermediate results private</li>
-        </ul>
-
-        <h2>Usage</h2>
-        <p>
-          Install the CLI tool and run it against your <code>mcp.config.json</code>:
-        </p>
-        <pre><code>npm install -g @abmalk/mcpcode
-          mcpcode generate</code></pre>
-        <p>
-          This generates a <code>servers/</code> directory with typed functions for each
-          tool. Import and call them directly in your agent code.
-        </p>
-
-        <h2>Features</h2>
-        <ul>
-          <li>STDIO, HTTP, and SSE transport support</li>
-          <li>Full TypeScript type inference</li>
-          <li>Watch mode for development</li>
-          <li>Search utilities for tool discovery</li>
-          <li>IDE integration rules for AI coding assistants</li>
-        </ul>
+          <div className="mt-12 p-6 border-l-2 border-amber-400 bg-white/5 italic text-neutral-400">
+            "A critical infrastructure piece for scaling agentic systems."
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-

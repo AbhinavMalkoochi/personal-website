@@ -1,92 +1,91 @@
 export default function ResumePage() {
   return (
-    <div className="section-wrapper max-w-3xl mx-auto">
-      <div className="animate-in flex justify-between items-baseline mb-16">
-        <h1 className="section-title mb-0">Resume</h1>
-        <a
-          href="/resume.pdf"
-          className="text-sm text-accent hover:text-white transition-colors"
-          download
-        >
-          Download PDF ↓
-        </a>
-      </div>
+    <div className="section-wrapper">
+      <div className="painting-frame animate-reveal max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-16 border-b border-white/10 pb-12">
+          <h1 className="gallery-title mb-4">Abhinav Malkoochi</h1>
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-neutral-400 font-serif italic">
+            <a href="mailto:abhinav.malkoochi@gmail.com" className="hover:text-amber-400 transition-colors">abhinav.malkoochi@gmail.com</a>
+            <span>•</span>
+            <a href="https://github.com/AbhinavMalkoochi" className="hover:text-amber-400 transition-colors">github.com/AbhinavMalkoochi</a>
+            <span>•</span>
+            <span>6307310098</span>
+          </div>
+        </div>
 
-      <div className="space-y-20 animate-in delay-1">
-
-        {/* Experience Section */}
-        <section>
-          <h2 className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-8">Experience</h2>
-
-          <div className="space-y-12">
-            {/* Item 1 */}
-            <div className="group">
-              <div className="flex justify-between items-baseline mb-2">
-                <h3 className="text-xl font-semibold text-white group-hover:text-accent transition-colors">Full Stack Intern</h3>
-                <span className="text-sm text-neutral-500 font-mono">Feb 2025 — Jul 2025</span>
-              </div>
-              <p className="text-neutral-400 mb-4">'Sup (YC W24) · Remote</p>
-              <ul className="space-y-2 text-neutral-400 text-sm leading-relaxed">
-                <li className="flex gap-3">
-                  <span className="text-neutral-600 block mt-1">•</span>
-                  <span>Engineered a scalable web scraping system using Python and Selenium for 30k+ profiles.</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-neutral-600 block mt-1">•</span>
-                  <span>Built AI-driven cold email automation pipelines with Next.js, boosting engagement by 35%.</span>
-                </li>
-              </ul>
+        {/* Education */}
+        <section className="mb-16">
+          <h3 className="text-amber-400 text-sm font-bold uppercase tracking-widest mb-6 font-sans">Education</h3>
+          <div className="paper-card">
+            <div className="flex justify-between items-baseline mb-2 flex-wrap gap-2">
+              <h2 className="text-xl font-serif font-bold">University of Texas at Dallas</h2>
+              <span className="font-mono text-sm text-neutral-600">Aug 2023 – Dec 2025</span>
             </div>
-
-            {/* Item 2 */}
-            <div className="group">
-              <div className="flex justify-between items-baseline mb-2">
-                <h3 className="text-xl font-semibold text-white group-hover:text-accent transition-colors">LLM Research</h3>
-                <span className="text-sm text-neutral-500 font-mono">Jan 2025 — May 2025</span>
-              </div>
-              <p className="text-neutral-400 mb-4">UT Dallas · Richardson, TX</p>
-              <ul className="space-y-2 text-neutral-400 text-sm leading-relaxed">
-                <li className="flex gap-3">
-                  <span className="text-neutral-600 block mt-1">•</span>
-                  <span>Executed large-scale experiments on context length scaling, achieving 2x faster convergence.</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-neutral-600 block mt-1">•</span>
-                  <span>Improved benchmark accuracy by 6% on math datasets through curriculum learning.</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Item 3 */}
-            <div className="group">
-              <div className="flex justify-between items-baseline mb-2">
-                <h3 className="text-xl font-semibold text-white group-hover:text-accent transition-colors">AI Intern</h3>
-                <span className="text-sm text-neutral-500 font-mono">Jun 2024 — Aug 2024</span>
-              </div>
-              <p className="text-neutral-400 mb-4">XNode.AI · Remote</p>
-              <ul className="space-y-2 text-neutral-400 text-sm leading-relaxed">
-                <li className="flex gap-3">
-                  <span className="text-neutral-600 block mt-1">•</span>
-                  <span>Developed a centralized Neo4j knowledge graph with vector embeddings.</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-neutral-600 block mt-1">•</span>
-                  <span>Built an agentic RAG chatbot, increasing query accuracy by 75%.</span>
-                </li>
-              </ul>
-            </div>
+            <p className="text-neutral-700 italic">BS in Computer Science</p>
           </div>
         </section>
 
-        {/* Education Section */}
-        <section>
-          <h2 className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-8">Education</h2>
-          <div className="flex justify-between items-baseline">
-            <div>
-              <h3 className="text-xl font-semibold text-white">B.S. Computer Science</h3>
-              <p className="text-neutral-400 mt-1">University of Texas at Dallas</p>
+        {/* Experience */}
+        <section className="mb-16">
+          <h3 className="text-amber-400 text-sm font-bold uppercase tracking-widest mb-6 font-sans">Experience</h3>
+          <div className="space-y-6">
+
+            {/* Sup */}
+            <div className="paper-card">
+              <div className="flex justify-between items-baseline mb-4 flex-wrap gap-2">
+                <h2 className="text-xl font-serif font-bold">Full Stack Intern, ‘Sup</h2>
+                <span className="font-mono text-sm text-neutral-600">Remote | Feb 2025 – July 2025</span>
+              </div>
+              <ul className="list-disc pl-5 space-y-2 leading-relaxed text-sm">
+                <li>Engineered a robust web scraping system using Python and Selenium to extract and analyze data from 30,000+ LinkedIn profiles, boosting targeted outreach efficiency by 40%.</li>
+                <li>Developed an AI-driven cold email automation pipeline with Next.js that leveraged enriched data to generate personalized messages, increasing engagement rates by 35% and cutting manual outreach time by 50%.</li>
+              </ul>
             </div>
-            <span className="text-sm text-neutral-500 font-mono">Graduating Dec 2025</span>
+
+            {/* UTD Research */}
+            <div className="paper-card">
+              <div className="flex justify-between items-baseline mb-4 flex-wrap gap-2">
+                <h2 className="text-xl font-serif font-bold">LLM Research, UT Dallas</h2>
+                <span className="font-mono text-sm text-neutral-600">Richardson, TX | Jan 2025 – May 2025</span>
+              </div>
+              <ul className="list-disc pl-5 space-y-2 leading-relaxed text-sm">
+                <li>Designed and executed large-scale experiments on context length scaling for LLMs.</li>
+                <li>Achieved 2x faster convergence and 50% lower compute vs. fixed 24k training while improving benchmark accuracy (+6% on AIME/AMC/MATH-500).</li>
+                <li>Introduced an iterative curriculum for context scaling for more efficient long-context reasoning, lower clipping ratio, and efficient token utilization on small models.</li>
+              </ul>
+            </div>
+
+            {/* XNode */}
+            <div className="paper-card">
+              <div className="flex justify-between items-baseline mb-4 flex-wrap gap-2">
+                <h2 className="text-xl font-serif font-bold">Artificial Intelligence Intern, XNode.AI</h2>
+                <span className="font-mono text-sm text-neutral-600">Remote | Jun 2024 – Aug 2024</span>
+              </div>
+              <ul className="list-disc pl-5 space-y-2 leading-relaxed text-sm">
+                <li>Developed a Neo4j knowledge graph with vector embeddings, centralizing company data (product, GitHub, specs).</li>
+                <li>Built an agentic chatbot with an LLM and RAG for knowledge graph interaction, enabling queries and insights.</li>
+                <li>Boosted knowledge graph query accuracy by 75% via RAG implementation.</li>
+              </ul>
+            </div>
+
+          </div>
+        </section>
+
+        {/* Skills */}
+        <section>
+          <h3 className="text-amber-400 text-sm font-bold uppercase tracking-widest mb-6 font-sans">Skills</h3>
+          <div className="paper-card">
+            <div className="space-y-4">
+              <div>
+                <span className="font-bold text-neutral-800 uppercase text-xs tracking-wider block mb-1">Languages</span>
+                <p className="text-sm">Java, Python, C/C++, SQL (Postgres), JavaScript/Typescript, HTML/CSS, R</p>
+              </div>
+              <div>
+                <span className="font-bold text-neutral-800 uppercase text-xs tracking-wider block mb-1">Frameworks</span>
+                <p className="text-sm">React, Next.js, Node.js, Flask, FastAPI, Unity, Firebase, Pytorch, Supabase, Docker, Kafka, Redis, AWS</p>
+              </div>
+            </div>
           </div>
         </section>
 

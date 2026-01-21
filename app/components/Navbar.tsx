@@ -22,51 +22,32 @@ export default function Navbar() {
     };
 
     return (
-        <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 p-1.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300 hover:bg-black/50 hover:border-white/20">
-            {/* Navigation Links */}
-            <div className="flex items-center gap-1 px-2">
+        <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 animate-reveal">
+            {/* Gallery Label Style Nav */}
+            <div className="flex items-center gap-6 px-8 py-3 bg-black/80 backdrop-blur-md rounded-sm border border-white/10 shadow-2xl">
                 {navItems.map((item) => (
                     <Link
                         key={item.href}
                         href={item.href}
                         className={`
-              relative px-4 py-2 rounded-full text-xs font-medium transition-all duration-300
-              ${isActive(item.href)
-                                ? "text-white bg-white/10"
-                                : "text-neutral-400 hover:text-white hover:bg-white/5"
-                            }
+              nav-label transition-all duration-300
+              ${isActive(item.href) ? "text-amber-400 active scale-110" : "text-neutral-400 hover:text-white"}
             `}
                     >
                         {item.name}
                     </Link>
                 ))}
+
+                <div className="w-px h-3 bg-white/20 mx-2" />
+
+                <button
+                    onClick={togglePause}
+                    className="text-neutral-500 hover:text-amber-400 transition-colors"
+                    title={isPaused ? "Play" : "Pause"}
+                >
+                    {isPaused ? "▶" : "⏸"}
+                </button>
             </div>
-
-            {/* Divider */}
-            <div className="w-px h-4 bg-white/10 mx-1" />
-
-            {/* Simulation Toggle */}
-            <button
-                onClick={togglePause}
-                className={`
-          flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300
-          ${isPaused
-                        ? "bg-white/5 text-neutral-500 hover:bg-white/10 hover:text-neutral-300"
-                        : "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 hover:text-blue-300"
-                    }
-        `}
-                title={isPaused ? "Play Simulation" : "Pause Simulation"}
-            >
-                {isPaused ? (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                    </svg>
-                ) : (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                    </svg>
-                )}
-            </button>
         </nav>
     );
 }

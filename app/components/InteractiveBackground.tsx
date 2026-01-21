@@ -113,25 +113,27 @@ class FlowParticle {
 
         switch (config.colorBase) {
             case "gold":
-                r = 255;
-                g = 215;
-                b = Math.floor(norm * 100);
+                r = 212;
+                g = 175;
+                b = 55;
                 break;
-            case "cyan":
-                r = 0;
-                g = Math.floor(200 + norm * 55);
-                b = 255;
+            case "cyan": // Now "Oil Blue"
+                r = 30;
+                g = 58;
+                b = 138;
                 break;
             case "white":
-                r = g = b = 200;
+                r = 230;
+                g = 225;
+                b = 214;
                 break;
-            default: // blue
-                r = Math.floor(50 + norm * 100);
-                g = Math.floor(50 + norm * 100);
-                b = Math.floor(200 + norm * 55);
+            default: // blue -> Deep Charcoal/Ink
+                r = Math.floor(40 + norm * 20);
+                g = Math.floor(40 + norm * 20);
+                b = Math.floor(40 + norm * 40);
         }
 
-        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.4 + norm * 0.6})`;
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.5 + norm * 0.5})`;
         ctx.fillRect(this.x, this.y, 1.5, 1.5);
     }
 }

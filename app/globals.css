@@ -1,226 +1,133 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
 :root {
-  /* Apple-inspired Dark Mode Palette */
-  --bg-color: #000000;
-  --foreground: #F5F5F7;
-  --muted: #86868B;
-  --subtle: #1D1D1F;
-  --border: rgba(255, 255, 255, 0.1);
-  --accent: #2997FF; /* Apple Blue */
-  --glass-bg: rgba(20, 20, 20, 0.4);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  /* Canvas / Oil Painting Palette */
+  --bg-color: #0c0c0e; /* Deep charcoal/almost black canvas */
+  --canvas-paper: #E6E1D6; /* Warm off-white paper/canvas tone */
+  --oil-black: #1a1a1a;
+  --oil-blue: #1E3A8A;
+  --gold-leaf: #D4AF37;
+  
+  --foreground: #E6E1D6;
+  --muted: #a3a3a3;
+  --border-frame: #404040;
 }
 
 @theme inline {
   --color-background: var(--bg-color);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
-  --color-subtle: var(--subtle);
-  --color-border: var(--border);
-  --color-accent: var(--accent);
+  --color-accent: var(--gold-leaf);
+  --color-canvas: var(--canvas-paper);
+  --color-ink: var(--oil-black);
   
-  /* System font stack for maximum cleanliness */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --font-display: 'Space Grotesk', var(--font-sans);
-  --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   background: var(--bg-color);
   color: var(--foreground);
   font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
-  overflow-x: hidden;
-  letter-spacing: -0.01em;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(20, 20, 20, 0.5) 0%, rgba(0, 0, 0, 0.8) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
 }
 
-::selection {
-  background: rgba(41, 151, 255, 0.3);
-}
-
-/* Minimalist Glass */
-.glass {
-  background: rgba(30, 30, 30, 0.3);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-}
-
-.glass-subtle {
-  background: rgba(255, 255, 255, 0.03);
+/* Canvas Frame Container */
+.painting-frame {
+  margin: 40px auto;
+  max-width: 1024px;
+  background: rgba(20, 20, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 0 0 1px rgba(0,0,0, 0.5),
+    0 20px 50px -10px rgba(0, 0, 0, 0.7);
+  padding: 60px;
+  position: relative;
+  min-height: 80vh;
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Layout */
-.main-content {
-  min-height: 100vh;
-  position: relative;
-  z-index: 10;
-  padding-top: 80px; /* Space for top navbar */
-}
-
-.section-wrapper {
-  max-width: 980px; /* Apple typically uses constrained widths */
-  margin: 0 auto;
-  padding: 80px 24px;
-  min-height: calc(100vh - 80px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-/* Typography */
-.hero-title {
-  font-family: var(--font-display);
-  font-size: clamp(3rem, 6vw, 5rem);
-  line-height: 1.05;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: #fff;
-  margin-bottom: 24px;
-}
-
-.section-title {
-  font-family: var(--font-display);
-  font-size: 2.5rem;
-  font-weight: 600;
+/* Decorative Header */
+.gallery-title {
+  font-family: var(--font-serif);
+  font-size: 3.5rem;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--canvas-paper);
   letter-spacing: -0.02em;
-  color: #fff;
-  margin-bottom: 40px;
+  margin-bottom: 1.5rem;
+  line-height: 1.1;
 }
 
-.text-body {
-  font-size: 1.0625rem; /* 17px approx */
-  line-height: 1.6;
+/* Typography Overrides */
+h1, h2, h3 {
+  font-family: var(--font-serif);
+}
+
+p {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+/* Navigation - Floating Gallery Label */
+.nav-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
   color: var(--muted);
+  transition: color 0.3s ease;
 }
 
-/* Bento Card Styles */
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
+.nav-label:hover, .nav-label.active {
+  color: var(--gold-leaf);
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
 }
 
-.bento-card {
-  background: linear-gradient(180deg, rgba(30,30,30,0.4) 0%, rgba(20,20,20,0.4) 100%);
-  border: 1px solid var(--glass-border);
-  border-radius: 24px; /* Smoother, larger corners */
-  padding: 32px;
-  backdrop-filter: blur(12px);
-  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
-  position: relative;
-  overflow: hidden;
+/* Resume Paper Card */
+.paper-card {
+  background: #fdfbf7;
+  color: #1a1a1a;
+  padding: 40px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  border-radius: 2px;
 }
 
-.bento-card:hover {
-  transform: scale(1.02);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+.paper-card h2, .paper-card h3 {
+  color: #1a1a1a;
 }
 
-.bento-card h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #fff;
-}
-
-.tag {
-  display: inline-block;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 999px; /* Pill shape */
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  margin-right: 8px;
-  margin-top: 8px;
-  border: none; /* Cleaner look */
+.paper-card p, .paper-card li {
+  color: #4a4a4a;
 }
 
 /* Animations */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-in {
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; /* Apple-style easing */
-  opacity: 0;
-}
-
-.delay-1 { animation-delay: 0.1s; }
-.delay-2 { animation-delay: 0.2s; }
-.delay-3 { animation-delay: 0.3s; }
-.delay-4 { animation-delay: 0.4s; }
-
-/* Buttons */
-.btn-minimal {
-  background: #fff;
-  color: #000;
-  padding: 12px 28px;
-  border-radius: 999px;
-  font-weight: 500;
-  font-size: 15px;
-  transition: all 0.2s ease;
-  display: inline-block;
-}
-
-.btn-minimal:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: scale(1.02);
-}
-
-.btn-outline {
-  background: transparent;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 12px 28px;
-  border-radius: 999px;
-  font-weight: 500;
-  font-size: 15px;
-  transition: all 0.2s ease;
-  display: inline-block;
-}
-
-.btn-outline:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #fff;
+.animate-reveal {
+  animation: reveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 /* Mobile */
 @media (max-width: 768px) {
-  .section-wrapper {
-    padding: 60px 20px;
-  }
-  
-  .hero-title {
-    font-size: 2.5rem;
-  }
-  
-  .bento-grid {
-    grid-template-columns: 1fr;
+  .painting-frame {
+    margin: 0;
+    width: 100%;
+    min-height: 100vh;
+    padding: 24px;
+    border: none;
   }
 }
