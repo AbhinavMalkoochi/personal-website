@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { SimplexNoise } from "@/app/lib/SimplexNoise";
+import { useSimulation } from "../context/SimulationContext";
 
 // Page-specific configuration
 interface PageConfig {
@@ -206,11 +207,10 @@ export default function InteractiveBackground() {
     const flowFieldRef = useRef<number[]>([]);
     const zOffRef = useRef(0);
     const dimensionsRef = useRef({ width: 0, height: 0, cols: 0, rows: 0 });
+    const { isPaused } = useSimulation();
 
     const getConfig = useCallback((): PageConfig => {
-        // Match exact path or fallback to default
         if (PAGE_CONFIGS[pathname]) return PAGE_CONFIGS[pathname];
-        // Check for partial matches (e.g., /blog/post-slug)
         for (const key of Object.keys(PAGE_CONFIGS)) {
             if (pathname.startsWith(key) && key !== "/") return PAGE_CONFIGS[key];
         }
@@ -234,7 +234,6 @@ export default function InteractiveBackground() {
             dimensionsRef.current = { width, height, cols, rows };
             flowFieldRef.current = new Array(cols * rows);
 
-            // Initialize particles
             particlesRef.current = [];
             for (let i = 0; i < PARTICLE_COUNT; i++) {
                 particlesRef.current.push(new FlowParticle(width, height));
@@ -256,7 +255,7 @@ export default function InteractiveBackground() {
         };
     }, []);
 
-    // Initialize chaos particles when entering chaos page
+    // Initialize chaos particles
     useEffect(() => {
         if (pathname === "/chaos") {
             chaosParticlesRef.current = [];
@@ -272,26 +271,27 @@ export default function InteractiveBackground() {
 
     // Animation loop
     useEffect(() => {
+        if (isPaused) {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+            return;
+        }
+
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        let lastTime = 0;
-
         const animate = (timestamp: number) => {
             const { width, height, cols, rows } = dimensionsRef.current;
             const config = getConfig();
 
-            // Trail effect
             ctx.fillStyle = pathname === "/chaos"
                 ? "rgba(5, 5, 5, 0.15)"
-                : "rgba(5, 5, 5, 0.2)";
+                : "rgba(0, 0, 0, 0.2)";
             ctx.fillRect(0, 0, width, height);
 
             if (pathname === "/chaos") {
-                // Lorenz attractor mode
                 const rotY = (mouseRef.current.x / width) * Math.PI * 4 + timestamp * 0.0002;
                 const cx = width / 2;
                 const cy = height / 2;
@@ -301,12 +301,10 @@ export default function InteractiveBackground() {
                     p.draw(ctx, rotY, cx, cy);
                 });
 
-                // Add new particles periodically
                 if (Math.random() > 0.97 && chaosParticlesRef.current.length < 50) {
                     chaosParticlesRef.current.push(new ChaosParticle());
                 }
             } else {
-                // Flow field mode
                 const zoom = config.noiseZoom;
                 let yOff = 0;
 
@@ -337,7 +335,6 @@ export default function InteractiveBackground() {
                 });
             }
 
-            lastTime = timestamp;
             animationRef.current = requestAnimationFrame(animate);
         };
 
@@ -348,12 +345,12 @@ export default function InteractiveBackground() {
                 cancelAnimationFrame(animationRef.current);
             }
         };
-    }, [pathname, getConfig]);
+    }, [pathname, getConfig, isPaused]);
 
     return (
         <canvas
             ref={canvasRef}
-            className="fixed inset-0 z-0"
+            className={`fixed inset-0 z-0 transition-opacity duration-700 ease-in-out ${isPaused ? 'opacity-0' : 'opacity-100'}`}
             style={{ pointerEvents: "none" }}
         />
     );

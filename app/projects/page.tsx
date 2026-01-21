@@ -4,62 +4,76 @@ const projects = [
   {
     slug: "mcpcode",
     name: "mcpcode",
-    tagline: "TypeScript code generation for MCP servers",
-    description: "A CLI tool that generates type-safe TypeScript code from MCP (Model Context Protocol) server definitions. Makes building AI tool integrations faster and more reliable.",
-    tags: ["TypeScript", "MCP", "CLI", "AI"],
+    description: "Generate type-safe TypeScript clients for Model Context Protocol servers. Eliminates runtime errors in AI agent integration.",
+    tags: ["TypeScript", "AI", "CLI"],
+    featured: true,
   },
   {
     slug: "browser-agent",
     name: "browser-agent",
-    tagline: "Browser automation library for LLM agents",
-    description: "A Python library using Chrome DevTools Protocol for browser automation. Designed specifically for LLM agents to interact with web pages programmatically.",
-    tags: ["Python", "CDP", "Automation", "AI Agents"],
+    description: "Headless browser automation library designed specifically for LLMs. Built on top of Chrome DevTools Protocol.",
+    tags: ["Python", "CDP", "Automation"],
+    featured: false,
   },
+  {
+    slug: "personal-website",
+    name: "Portfolio V3",
+    description: "This website. Built with Next.js, Simplex Noise, and Apple-inspired minimalist design principles.",
+    tags: ["React", "Design", "Graphics"],
+    featured: false,
+  }
 ];
 
 export default function ProjectsPage() {
   return (
     <div className="section-wrapper">
-      <div className="animate-in">
-        <h1 className="section-title">Selected Projects</h1>
-        <p className="text-muted mt-2">
-          Open source tools and libraries, built with precision.
+      <div className="animate-in mb-12">
+        <h1 className="section-title">Work</h1>
+        <p className="text-body max-w-xl">
+          A selection of tools and libraries I've engineered. Open source and built for production.
         </p>
       </div>
 
-      <div className="projects-grid animate-in delay-1">
-        {projects.map((project) => (
+      <div className="bento-grid animate-in delay-1">
+        {projects.map((project, index) => (
           <Link
             key={project.slug}
             href={`/projects/${project.slug}`}
-            className="glass-card group"
+            className={`bento-card group flex flex-col justify-between ${project.featured ? 'md:col-span-2' : ''}`}
           >
-            <h3 className="text-xl font-semibold group-hover:text-accent transition-colors">
-              {project.name}
-            </h3>
-            <p className="text-muted text-sm mt-2 mb-4 leading-relaxed">
-              {project.description}
-            </p>
-            <div className="tags">
-              {project.tags.map((tag) => (
-                <span key={tag} className="tag">
-                  {tag}
-                </span>
-              ))}
+            <div>
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex gap-2">
+                  {project.tags.map(tag => (
+                    <span key={tag} className="text-xs font-mono text-muted bg-white/5 px-2 py-1 rounded-md">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <span className="text-muted group-hover:text-white transition-colors">↗</span>
+              </div>
+
+              <h3 className="text-2xl font-bold tracking-tight text-white mb-3">
+                {project.name}
+              </h3>
+
+              <p className="text-muted leading-relaxed">
+                {project.description}
+              </p>
             </div>
+
+            {project.featured && (
+              <div className="mt-8 pt-6 border-t border-white/5">
+                <p className="text-sm text-accent">Featured Project</p>
+              </div>
+            )}
           </Link>
         ))}
-      </div>
 
-      {/* Future Projects Teaser */}
-      <div className="animate-in delay-2 mt-12">
-        <div className="glass-subtle p-6 rounded-lg max-w-md">
-          <h3 className="text-sm uppercase tracking-wider text-muted mb-3 font-mono">
-            Coming Soon
-          </h3>
-          <p className="text-gray-400 text-sm">
-            More projects in development, including work on LLM context scaling
-            and knowledge graph systems.
+        {/* Placeholder for future work */}
+        <div className="bento-card flex items-center justify-center min-h-[200px] border-dashed border-neutral-800 bg-transparent">
+          <p className="text-neutral-600 text-sm font-mono uppercase tracking-widest">
+            More Coming Soon
           </p>
         </div>
       </div>

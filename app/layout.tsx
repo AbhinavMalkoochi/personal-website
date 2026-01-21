@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import Sidebar from "./components/sidebar";
+import Navbar from "./components/Navbar";
 import InteractiveBackground from "./components/InteractiveBackground";
+import { SimulationProvider } from "./context/SimulationContext";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -17,8 +18,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Abhinav Malkoochi | CS @ UTD",
-  description: "CS student at UT Dallas, founding engineer at startups. Building at the intersection of AI, math, and elegant code.",
+  title: "Abhinav Malkoochi | Engineer & Builder",
+  description: "Building the future of AI tools and elegant software systems.",
 };
 
 export default function RootLayout({
@@ -29,13 +30,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}>
-        <InteractiveBackground />
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="main-content flex-1">
+        <SimulationProvider>
+          <InteractiveBackground />
+          <Navbar />
+          <main className="main-content">
             {children}
           </main>
-        </div>
+        </SimulationProvider>
       </body>
     </html>
   );

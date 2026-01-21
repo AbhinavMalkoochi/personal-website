@@ -2,72 +2,50 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="section-wrapper">
+    <div className="section-wrapper items-center text-center">
       {/* Hero Section */}
-      <div className="animate-in">
-        <h1 className="hero-title">
-          DESIGN<br />
-          THROUGH<br />
-          <span className="glow-text">CALCULUS</span>
+      <div className="animate-in max-w-2xl mx-auto">
+        <h1 className="hero-title mb-6">
+          Building tools for the <span className="text-accent">AI era</span>.
         </h1>
 
-        <div className="hero-subtitle animate-in delay-1">
-          <p>
-            CS student at <strong>UT Dallas</strong>, graduating December 2025.
-            Founding engineer at two startups. Building at the intersection of
-            <span className="text-accent"> AI</span>,
-            <span className="text-accent"> mathematics</span>, and
-            <span className="text-accent"> elegant code</span>.
-          </p>
-        </div>
-      </div>
+        <p className="text-body text-lg mb-12 max-w-xl mx-auto">
+          I'm Abhinav. A computer science student and founding engineer focused on
+          LLM infrastructure, agentic workflows, and elegant systems.
+        </p>
 
-      {/* Math Formula Display */}
-      <div className="animate-in delay-2 mt-16 max-w-xl">
-        <div className="glass-subtle p-6 rounded-lg">
-          <div className="text-xs uppercase tracking-widest text-muted mb-3 font-mono">
-            Perlin Noise • Flow Field Generation
-          </div>
-          <div className="formula">
-            <code>
-              f(x,y,t) = Σ (1/2ⁿ) · noise(2ⁿx, 2ⁿy, t)
-            </code>
-          </div>
-          <p className="text-sm text-muted mt-4 leading-relaxed">
-            The particles flowing behind this page follow a noise-based vector field,
-            creating organic, fluid motion that responds to your cursor.
-          </p>
-        </div>
-      </div>
-
-      {/* Quick Navigation */}
-      <div className="animate-in delay-3 mt-16">
-        <div className="text-xs uppercase tracking-widest text-muted mb-6 font-mono">
-          Navigate
-        </div>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/projects" className="glass-card hover:glow-border">
-            <h3 className="text-lg font-medium">Projects →</h3>
-            <p className="text-sm text-muted mt-1">mcpcode, browser-agent, and more</p>
+        <div className="flex gap-4 justify-center">
+          <Link href="/projects" className="btn-minimal">
+            View Work
           </Link>
-          <Link href="/chaos" className="glass-card hover:glow-border border-amber-500/20">
-            <h3 className="text-lg font-medium text-amber-400">Chaos →</h3>
-            <p className="text-sm text-muted mt-1">Lorenz attractor visualization</p>
+          <Link href="/about" className="btn-outline">
+            About Me
           </Link>
         </div>
       </div>
 
-      {/* Floating Status Card */}
-      <div className="info-card animate-in delay-4">
-        <h3 className="text-accent text-xs uppercase tracking-wider mb-2">Simulation</h3>
-        <div className="text-sm text-muted space-y-1">
-          <div className="flex justify-between">
-            <span>Mode:</span>
-            <span className="text-foreground font-mono">Flow Field</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Particles:</span>
-            <span className="text-foreground font-mono">1,500</span>
+      {/* Featured Grid Shortcut */}
+      <div className="mt-32 w-full animate-in delay-2">
+        <div className="bento-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto">
+          {/* Featured Project */}
+          <Link href="/projects/mcpcode" className="bento-card col-span-1 md:col-span-2 group cursor-pointer text-left">
+            <div className="flex justify-between items-start mb-4">
+              <span className="text-xs font-mono text-accent bg-blue-500/10 px-2 py-1 rounded">FEATURED</span>
+              <span className="text-muted group-hover:text-white transition-colors">↗</span>
+            </div>
+            <h3 className="text-2xl font-semibold text-white mb-2">mcpcode</h3>
+            <p className="text-muted">
+              TypeScript code generation for MCP servers. Bringing type safety to AI agent interactions.
+            </p>
+          </Link>
+
+          {/* Current Focus */}
+          <div className="bento-card text-left">
+            <div className="text-xs font-mono text-muted mb-4 uppercase tracking-wider">Currently Building</div>
+            <p className="text-white font-medium mb-2">Browser Agents</p>
+            <p className="text-sm text-muted">
+              Developing robust automation for LLM-driven web browsing.
+            </p>
           </div>
         </div>
       </div>
