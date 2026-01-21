@@ -18,8 +18,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Abhinav Malkoochi | Engineer & Builder",
-  description: "Building the future of AI tools and elegant software systems.",
+  title: "Abhinav Malkoochi",
+  description: "Computer Science Graduate interested in AI.",
 };
 
 export default function RootLayout({
@@ -32,10 +32,12 @@ export default function RootLayout({
       <body className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}>
         <SimulationProvider>
           <InteractiveBackground />
-          <Navbar />
-          <main className="main-content">
-            {children}
-          </main>
+          <div className="canvas-frame">
+            <Navbar />
+            <main className="main-content">
+              {children}
+            </main>
+          </div>
         </SimulationProvider>
       </body>
     </html>

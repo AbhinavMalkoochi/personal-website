@@ -1,24 +1,23 @@
+import Link from "next/link";
+
 export default function Home() {
-  return (
-    <div className="section-wrapper items-center justify-center min-h-[80vh]">
-      <div className="painting-frame flex flex-col items-center justify-center text-center animate-reveal">
-        <h1 className="gallery-title mb-6">
-          Abhinav Malkoochi
-        </h1>
+    return (
+        <div className="section-wrapper flex flex-col items-center justify-center text-center">
+            <div className="animate-in">
+                <h1 className="hero-title">Abhinav Malkoochi</h1>
+                <p className="text-body text-lg mt-4 max-w-md">
+                    Computer Science Graduate. Building in the AI space.
+                </p>
 
-        <div className="w-16 h-1 bg-amber-400 mb-8 mx-auto" />
-
-        <p className="text-xl text-neutral-300 font-serif italic tracking-wide mb-2">
-          Computer Science Graduate
-        </p>
-        <p className="text-sm text-neutral-500 uppercase tracking-[0.2em] mb-12">
-          Artificial Intelligence • Systems
-        </p>
-
-        <p className="text-neutral-400 max-w-md mx-auto leading-loose italic">
-          "Building at the intersection of elegant code and chaotic systems."
-        </p>
-      </div>
-    </div>
-  );
+                <div className="flex gap-4 justify-center mt-10">
+                    <Link href="/projects" className="btn-primary">
+                        View Work
+                    </Link>
+                    <Link href="/resume" className="btn-secondary">
+                        Resume
+                    </Link>
+                </div>
+            </div>
+        </div>
+    );
 }

@@ -1,133 +1,376 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
 :root {
-  /* Canvas / Oil Painting Palette */
-  --bg-color: #0c0c0e; /* Deep charcoal/almost black canvas */
-  --canvas-paper: #E6E1D6; /* Warm off-white paper/canvas tone */
-  --oil-black: #1a1a1a;
-  --oil-blue: #1E3A8A;
-  --gold-leaf: #D4AF37;
-  
-  --foreground: #E6E1D6;
+  /* Canvas/Painting Aesthetic */
+  --bg-color: #0a0a0a;
+  --canvas-bg: #111111;
+  --foreground: #ffffff;
   --muted: #a3a3a3;
-  --border-frame: #404040;
+  --subtle: #262626;
+  --border: rgba(255, 255, 255, 0.15);
+  --accent: #60a5fa;
+  --frame-color: #1a1a1a;
+  --frame-border: rgba(255, 255, 255, 0.08);
 }
 
 @theme inline {
   --color-background: var(--bg-color);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
-  --color-accent: var(--gold-leaf);
-  --color-canvas: var(--canvas-paper);
-  --color-ink: var(--oil-black);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
   
-  --font-serif: "Playfair Display", Georgia, serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Space Grotesk', var(--font-sans);
+  --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--bg-color);
   color: var(--foreground);
   font-family: var(--font-sans);
-  background-image: 
-    radial-gradient(circle at 50% 50%, rgba(20, 20, 20, 0.5) 0%, rgba(0, 0, 0, 0.8) 100%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  overflow-x: hidden;
 }
 
-/* Canvas Frame Container */
-.painting-frame {
-  margin: 40px auto;
-  max-width: 1024px;
-  background: rgba(20, 20, 20, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 
-    0 0 0 1px rgba(0,0,0, 0.5),
-    0 20px 50px -10px rgba(0, 0, 0, 0.7);
-  padding: 60px;
+::selection {
+  background: rgba(96, 165, 250, 0.3);
+}
+
+/* Canvas Frame Effect - Like viewing a painting */
+.canvas-frame {
   position: relative;
-  min-height: 80vh;
-  backdrop-filter: blur(10px);
+  background: var(--canvas-bg);
+  border: 2px solid var(--frame-border);
+  border-radius: 4px;
+  box-shadow: 
+    inset 0 0 60px rgba(0, 0, 0, 0.5),
+    0 0 0 8px var(--frame-color),
+    0 0 0 10px var(--frame-border),
+    0 20px 60px rgba(0, 0, 0, 0.6);
+  margin: 24px;
+  min-height: calc(100vh - 48px);
+  overflow: hidden;
 }
 
-/* Decorative Header */
-.gallery-title {
-  font-family: var(--font-serif);
-  font-size: 3.5rem;
-  font-weight: 400;
-  font-style: italic;
-  color: var(--canvas-paper);
-  letter-spacing: -0.02em;
-  margin-bottom: 1.5rem;
+/* Subtle grain texture overlay */
+.canvas-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Navigation */
+.main-content {
+  position: relative;
+  z-index: 10;
+  padding-top: 100px;
+}
+
+/* Section Wrapper */
+.section-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 60px 32px;
+  min-height: calc(100vh - 100px);
+}
+
+/* Typography - High Visibility */
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4rem);
   line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin-bottom: 16px;
 }
 
-/* Typography Overrides */
-h1, h2, h3 {
-  font-family: var(--font-serif);
+.section-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #fff;
+  margin-bottom: 32px;
 }
 
-p {
-  font-family: var(--font-sans);
-  font-weight: 300;
+/* Body text - CLEAR AND VISIBLE */
+.text-body {
+  font-size: 1rem;
   line-height: 1.7;
-  letter-spacing: 0.01em;
+  color: #d4d4d4; /* Much lighter than before */
 }
 
-/* Navigation - Floating Gallery Label */
-.nav-label {
-  font-family: var(--font-sans);
-  font-size: 11px;
+/* Resume specific - HIGH CONTRAST */
+.resume-section h2 {
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--muted);
-  transition: color 0.3s ease;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--subtle);
+  padding-bottom: 8px;
 }
 
-.nav-label:hover, .nav-label.active {
-  color: var(--gold-leaf);
-  text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+.resume-item {
+  margin-bottom: 32px;
 }
 
-/* Resume Paper Card */
-.paper-card {
-  background: #fdfbf7;
-  color: #1a1a1a;
-  padding: 40px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-  border-radius: 2px;
+.resume-item h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
 }
 
-.paper-card h2, .paper-card h3 {
-  color: #1a1a1a;
+.resume-item .company {
+  font-size: 0.875rem;
+  color: #a3a3a3;
+  margin-bottom: 12px;
 }
 
-.paper-card p, .paper-card li {
-  color: #4a4a4a;
+.resume-item .date {
+  font-size: 0.8rem;
+  color: #737373;
+  font-family: var(--font-mono);
+}
+
+.resume-item ul {
+  margin-top: 12px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.resume-item li {
+  position: relative;
+  padding-left: 16px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #d4d4d4;
+  line-height: 1.6;
+}
+
+.resume-item li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+/* Bento Cards */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.bento-card {
+  background: rgba(20, 20, 20, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  transition: all 0.3s ease;
+}
+
+.bento-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.bento-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.bento-card p {
+  color: #a3a3a3;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Tags */
+.tag {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  background: rgba(96, 165, 250, 0.15);
+  color: var(--accent);
+  margin-right: 6px;
+  margin-top: 8px;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #fff;
+  color: #000;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.btn-primary:hover {
+  background: #e5e5e5;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #fff;
+  border: 1px solid var(--border);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #fff;
+}
+
+/* Chaos page - minimal overlay */
+.chaos-overlay {
+  position: fixed;
+  bottom: 32px;
+  left: 32px;
+  z-index: 20;
+  background: rgba(10, 10, 10, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 280px;
 }
 
 /* Animations */
-@keyframes reveal {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.animate-reveal {
-  animation: reveal 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+.animate-in {
+  animation: fadeInUp 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+
+/* Project Detail Page */
+.project-detail {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 60px 24px;
+}
+
+.project-detail h1 {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.project-detail .description {
+  font-size: 1.1rem;
+  color: #d4d4d4;
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+.project-detail h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 40px;
+  margin-bottom: 16px;
+}
+
+.project-detail ul {
+  list-style: none;
+  padding: 0;
+}
+
+.project-detail li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 12px;
+  color: #d4d4d4;
+  line-height: 1.6;
+}
+
+.project-detail li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
 }
 
 /* Mobile */
 @media (max-width: 768px) {
-  .painting-frame {
-    margin: 0;
-    width: 100%;
-    min-height: 100vh;
-    padding: 24px;
-    border: none;
+  .canvas-frame {
+    margin: 12px;
+    min-height: calc(100vh - 24px);
+  }
+  
+  .section-wrapper {
+    padding: 40px 20px;
+  }
+  
+  .hero-title {
+    font-size: 2rem;
+  }
+  
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chaos-overlay {
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    max-width: none;
   }
 }

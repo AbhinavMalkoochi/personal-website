@@ -1,41 +1,51 @@
-export default function McpCodePage() {
-  return (
-    <div className="section-wrapper">
-      <div className="painting-frame animate-reveal max-w-4xl mx-auto">
-        <div className="mb-12 text-center">
-          <h1 className="gallery-title mb-4">MCP Code</h1>
-          <p className="text-neutral-400 font-serif italic text-lg">
-            On-demand tool loading for AI agents.
-          </p>
+import Link from "next/link";
+
+export default function MCPCodePage() {
+    return (
+        <div className="project-detail animate-in">
+            <Link href="/projects" className="text-sm text-muted hover:text-white transition-colors mb-8 inline-block">
+                ← Back to Projects
+            </Link>
+
+            <h1>MCP Code</h1>
+
+            <div className="flex gap-2 mb-8">
+                <span className="tag">TypeScript</span>
+                <span className="tag">AI</span>
+                <span className="tag">CLI</span>
+            </div>
+
+            <p className="description">
+                A TypeScript system that enables AI agents to load MCP (Model Context Protocol) tools
+                on-demand, dramatically reducing context usage and improving performance.
+            </p>
+
+            <h2>Key Features</h2>
+            <ul>
+                <li>On-demand tool loading reduces context usage by 90% vs direct tool calls</li>
+                <li>Code-execution workflows filter large datasets before reaching the model</li>
+                <li>Cuts token overhead by 50-95% depending on workload</li>
+                <li>Filesystem-based tool interface for dozens of MCP servers</li>
+                <li>Improved tool discovery speed across server ecosystem</li>
+            </ul>
+
+            <h2>Technical Stack</h2>
+            <ul>
+                <li>TypeScript for type-safe code generation</li>
+                <li>MCP protocol integration</li>
+                <li>CLI interface for easy adoption</li>
+            </ul>
+
+            <div className="mt-12">
+                <a
+                    href="https://github.com/AbhinavMalkoochi/mcpcode"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary"
+                >
+                    View on GitHub →
+                </a>
+            </div>
         </div>
-
-        <div className="prose prose-invert prose-lg mx-auto text-neutral-300 leading-loose font-sans">
-          <p className="first-letter:text-5xl first-letter:font-serif first-letter:text-amber-400 first-letter:mr-2 float-left">
-            M
-          </p>
-          <p>
-            CP Code is a TypeScript system architected to solve the context bottleneck in AI agent workflows.
-            By enabling agents to load Model Context Protocol (MCP) tools on-demand, it reduces context usage
-            by <strong>90%</strong> compared to direct tool calls.
-          </p>
-
-          <h3 className="text-white font-serif mt-12 mb-6 text-2xl">Key Engineering</h3>
-          <ul className="list-disc pl-6 space-y-4 marker:text-amber-400">
-            <li>
-              <strong>Context Efficiency:</strong> Implemented code-execution workflows that filter large datasets
-              before they reach the model, cutting token overhead by 50–95%.
-            </li>
-            <li>
-              <strong>Filesystem Interface:</strong> Created a unified filesystem-based interface for accessing
-              dozens of MCP servers, significantly improving tool discovery speed and developer experience.
-            </li>
-          </ul>
-
-          <div className="mt-12 p-6 border-l-2 border-amber-400 bg-white/5 italic text-neutral-400">
-            "A critical infrastructure piece for scaling agentic systems."
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
