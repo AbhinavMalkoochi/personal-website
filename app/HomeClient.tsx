@@ -69,8 +69,7 @@ export default function HomeClient({ projects }: Props) {
                 {/* About Section */}
                 <section className="about-section animate-in delay-1">
                     <p className="about-text">
-                        CS graduate from UT Dallas. Building AI infrastructure—LLM tooling,
-                        browser automation, and developer productivity systems.
+                        CS Graduate from UT Dallas
                     </p>
                 </section>
 
