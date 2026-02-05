@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
 export type AnimationMode = "off" | "boids" | "lorenz";
 
@@ -11,15 +11,17 @@ interface SimulationContextType {
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
 
-function getInitialMode(): AnimationMode {
-    if (typeof window === "undefined") return "boids";
-    const stored = localStorage.getItem("sim-mode");
-    if (stored === "off" || stored === "lorenz") return stored;
-    return "boids";
-}
-
 export function SimulationProvider({ children }: { children: ReactNode }) {
-    const [mode, setModeState] = useState<AnimationMode>(getInitialMode);
+    // Always start with "boids" to match server render
+    const [mode, setModeState] = useState<AnimationMode>("boids");
+
+    // Hydrate from localStorage after mount (client-side only)
+    useEffect(() => {
+        const stored = localStorage.getItem("sim-mode");
+        if (stored === "off" || stored === "lorenz") {
+            setModeState(stored);
+        }
+    }, []);
 
     const setMode = (newMode: AnimationMode) => {
         localStorage.setItem("sim-mode", newMode);

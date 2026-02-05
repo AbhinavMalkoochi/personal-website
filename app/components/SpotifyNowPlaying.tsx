@@ -2,7 +2,7 @@
 
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { NowPlayingData } from "@/convex/spotify";
 import Image from "next/image";
 
@@ -10,10 +10,10 @@ const POLL_INTERVAL_MS = 10_000;
 
 function SoundBars() {
     return (
-        <div className="spotify-playing-indicator">
-            <span />
-            <span />
-            <span />
+        <div className="absolute bottom-1 right-1 flex items-end gap-0.5 h-3.5 p-1 bg-black/60 backdrop-blur-sm rounded">
+            <span className="w-0.5 bg-[#1DB954] rounded-full animate-[soundBar_1.2s_ease-in-out_infinite] h-1/2" />
+            <span className="w-0.5 bg-[#1DB954] rounded-full animate-[soundBar_1.2s_ease-in-out_infinite_0.25s] h-full" />
+            <span className="w-0.5 bg-[#1DB954] rounded-full animate-[soundBar_1.2s_ease-in-out_infinite_0.5s] h-[70%]" />
         </div>
     );
 }
@@ -22,6 +22,9 @@ export default function SpotifyNowPlaying() {
     const getNowPlaying = useAction(api.spotify.getNowPlaying);
     const [data, setData] = useState<NowPlayingData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [interpolatedProgress, setInterpolatedProgress] = useState(0);
+    const lastUpdateTime = useRef<number>(Date.now());
+    const animationRef = useRef<number | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -29,7 +32,13 @@ export default function SpotifyNowPlaying() {
         const fetchData = async () => {
             try {
                 const result = await getNowPlaying();
-                if (mounted) setData(result);
+                if (mounted && result) {
+                    setData(result);
+                    setInterpolatedProgress(result.progressMs);
+                    lastUpdateTime.current = Date.now();
+                } else if (mounted) {
+                    setData(null);
+                }
             } catch {
                 if (mounted) setData(null);
             } finally {
@@ -45,76 +54,144 @@ export default function SpotifyNowPlaying() {
         };
     }, [getNowPlaying]);
 
+    // Smooth interpolation between polls
+    useEffect(() => {
+        if (!data?.isPlaying) return;
+
+        const animate = () => {
+            const elapsed = Date.now() - lastUpdateTime.current;
+            const newProgress = Math.min(data.progressMs + elapsed, data.durationMs);
+            setInterpolatedProgress(newProgress);
+            animationRef.current = requestAnimationFrame(animate);
+        };
+
+        animationRef.current = requestAnimationFrame(animate);
+        return () => {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        };
+    }, [data]);
+
+    const baseWidgetClasses = `
+        fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+        flex items-center gap-3 px-4 py-2.5
+        bg-white/80 backdrop-blur-xl
+        border border-white/50
+        rounded-2xl
+        shadow-[0_8px_32px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.8)]
+        transition-all duration-300 ease-out
+        hover:bg-white/90 hover:shadow-[0_12px_40px_rgba(0,0,0,0.15)]
+        hover:-translate-x-1/2 hover:-translate-y-1
+    `;
+
     if (isLoading) {
         return (
-            <div className="spotify-widget spotify-loading">
-                <Image
-                    src="/Spotify.png"
-                    alt="Spotify"
-                    width={20}
-                    height={20}
-                    className="spotify-icon-img"
-                />
-                <span className="spotify-placeholder">Loading...</span>
+            <div className={baseWidgetClasses}>
+                <Image src="/Spotify.png" alt="Spotify" width={18} height={18} className="opacity-80" />
+                <span className="text-sm text-gray-500 font-medium">Loading...</span>
             </div>
         );
     }
 
     if (!data) {
         return (
-            <div className="spotify-widget spotify-idle">
-                <Image
-                    src="/Spotify.png"
-                    alt="Spotify"
-                    width={20}
-                    height={20}
-                    className="spotify-icon-img"
-                />
-                <span className="spotify-placeholder">Not playing</span>
+            <div className={baseWidgetClasses}>
+                <Image src="/Spotify.png" alt="Spotify" width={18} height={18} className="opacity-80" />
+                <span className="text-sm text-gray-500 font-medium">Not playing</span>
             </div>
         );
     }
 
-    const progressPercent = (data.progressMs / data.durationMs) * 100;
+    const progressPercent = (interpolatedProgress / data.durationMs) * 100;
+
+    const formatTime = (ms: number) => {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
 
     return (
         <a
             href={data.trackUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="spotify-widget spotify-playing"
+            className="
+                fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+                flex items-center gap-4
+                w-[420px] max-w-[calc(100%-32px)] px-4 py-3
+                bg-white/80 backdrop-blur-xl
+                border border-white/50
+                rounded-2xl
+                shadow-[0_8px_32px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.8)]
+                transition-all duration-300 ease-out
+                hover:bg-white/90 hover:shadow-[0_16px_48px_rgba(0,0,0,0.15)]
+                hover:-translate-x-1/2 hover:-translate-y-1
+                no-underline text-inherit
+                group
+            "
         >
-            <div className="spotify-album-art">
+            {/* Album Art */}
+            <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 shadow-md bg-gradient-to-br from-gray-100 to-gray-200">
                 {data.albumArt && (
                     <Image
                         src={data.albumArt}
                         alt={data.albumName}
                         width={48}
                         height={48}
+                        className="w-full h-full object-cover"
                         unoptimized
                     />
                 )}
                 {data.isPlaying && <SoundBars />}
             </div>
 
-            <div className="spotify-info">
-                <div className="spotify-track-name">{data.trackName}</div>
-                <div className="spotify-artist-name">{data.artistName}</div>
-                <div className="spotify-progress">
-                    <div
-                        className="spotify-progress-bar"
-                        style={{ width: `${progressPercent}%` }}
+            {/* Track Info + Progress */}
+            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                {/* Track and Artist */}
+                <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-black truncate leading-tight">
+                            {data.trackName}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate leading-tight">
+                            {data.artistName}
+                        </p>
+                    </div>
+                    <Image
+                        src="/Spotify.png"
+                        alt="Spotify"
+                        width={20}
+                        height={20}
+                        className="opacity-50 group-hover:opacity-80 transition-opacity flex-shrink-0"
                     />
                 </div>
-            </div>
 
-            <Image
-                src="/Spotify.png"
-                alt="Spotify"
-                width={18}
-                height={18}
-                className="spotify-logo-img"
-            />
+                {/* Progress Bar */}
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-medium text-gray-400 min-w-[24px] tabular-nums">
+                        {formatTime(interpolatedProgress)}
+                    </span>
+
+                    <div className="flex-1 h-1 bg-black/10 rounded-full relative group/progress">
+                        <div
+                            className="h-full bg-gradient-to-r from-[#1DB954] to-[#1ed760] rounded-full"
+                            style={{ width: `${progressPercent}%` }}
+                        />
+                        {/* Progress Knob */}
+                        <div
+                            className="absolute top-1/2 w-2.5 h-2.5 bg-white rounded-full shadow-md border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{
+                                left: `calc(${progressPercent}% - 5px)`,
+                                transform: 'translateY(-50%)'
+                            }}
+                        />
+                    </div>
+
+                    <span className="text-[10px] font-medium text-gray-400 min-w-[24px] tabular-nums text-right">
+                        {formatTime(data.durationMs)}
+                    </span>
+                </div>
+            </div>
         </a>
     );
 }
