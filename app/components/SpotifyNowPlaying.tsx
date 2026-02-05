@@ -2,7 +2,7 @@
 
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { NowPlayingData } from "@/convex/spotify";
 import Image from "next/image";
 
@@ -22,25 +22,28 @@ export default function SpotifyNowPlaying() {
     const getNowPlaying = useAction(api.spotify.getNowPlaying);
     const [data, setData] = useState<NowPlayingData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [hasFetched, setHasFetched] = useState(false);
 
-    // Simple polling without useCallback/useEffect
-    if (!hasFetched) {
-        setHasFetched(true);
-        getNowPlaying()
-            .then(setData)
-            .catch(() => setData(null))
-            .finally(() => setIsLoading(false));
+    useEffect(() => {
+        let mounted = true;
 
-        // Set up interval
-        if (typeof window !== "undefined") {
-            setInterval(() => {
-                getNowPlaying()
-                    .then(setData)
-                    .catch(() => setData(null));
-            }, POLL_INTERVAL_MS);
-        }
-    }
+        const fetchData = async () => {
+            try {
+                const result = await getNowPlaying();
+                if (mounted) setData(result);
+            } catch {
+                if (mounted) setData(null);
+            } finally {
+                if (mounted) setIsLoading(false);
+            }
+        };
+
+        fetchData();
+        const interval = setInterval(fetchData, POLL_INTERVAL_MS);
+        return () => {
+            mounted = false;
+            clearInterval(interval);
+        };
+    }, [getNowPlaying]);
 
     if (isLoading) {
         return (
@@ -83,8 +86,13 @@ export default function SpotifyNowPlaying() {
         >
             <div className="spotify-album-art">
                 {data.albumArt && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={data.albumArt} alt={data.albumName} />
+                    <Image
+                        src={data.albumArt}
+                        alt={data.albumName}
+                        width={48}
+                        height={48}
+                        unoptimized
+                    />
                 )}
                 {data.isPlaying && <SoundBars />}
             </div>
