@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import InteractiveBackground from "./components/InteractiveBackground";
 import { SimulationProvider } from "./context/SimulationContext";
+import { ConvexClientProvider } from "./providers/ConvexClientProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,12 +24,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
-        <SimulationProvider>
-          <InteractiveBackground />
-          <main className="main-content">
-            {children}
-          </main>
-        </SimulationProvider>
+        <ConvexClientProvider>
+          <SimulationProvider>
+            <InteractiveBackground />
+            <main className="main-content">
+              {children}
+            </main>
+          </SimulationProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );

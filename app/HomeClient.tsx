@@ -3,6 +3,7 @@
 import { type ProjectMeta } from "./lib/projects";
 import Link from "next/link";
 import ModeToggle from "./components/ModeToggle";
+import SpotifyNowPlaying from "./components/SpotifyNowPlaying";
 
 const experiences = [
     { company: "'Sup", title: "Full Stack Intern" },
@@ -18,6 +19,7 @@ export default function HomeClient({ projects }: Props) {
     return (
         <>
             <ModeToggle />
+            <SpotifyNowPlaying />
 
             <div className="page-container">
                 {/* Header Section */}
