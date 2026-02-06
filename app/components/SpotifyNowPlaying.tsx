@@ -2,7 +2,7 @@
 
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { NowPlayingData } from "@/convex/spotify";
 import Image from "next/image";
 
@@ -22,27 +22,23 @@ export default function SpotifyNowPlaying() {
     const getNowPlaying = useAction(api.spotify.getNowPlaying);
     const [data, setData] = useState<NowPlayingData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [interpolatedProgress, setInterpolatedProgress] = useState(0);
-    const lastUpdateTime = useRef<number>(Date.now());
-    const animationRef = useRef<number | null>(null);
 
+    // Single useEffect for polling - justified per React docs (synchronizing with external system)
     useEffect(() => {
         let mounted = true;
 
         const fetchData = async () => {
             try {
                 const result = await getNowPlaying();
-                if (mounted && result) {
-                    setData(result);
-                    setInterpolatedProgress(result.progressMs);
-                    lastUpdateTime.current = Date.now();
-                } else if (mounted) {
-                    setData(null);
+                if (mounted) {
+                    setData(result || null);
+                    setIsLoading(false);
                 }
             } catch {
-                if (mounted) setData(null);
-            } finally {
-                if (mounted) setIsLoading(false);
+                if (mounted) {
+                    setData(null);
+                    setIsLoading(false);
+                }
             }
         };
 
@@ -53,23 +49,6 @@ export default function SpotifyNowPlaying() {
             clearInterval(interval);
         };
     }, [getNowPlaying]);
-
-    // Smooth interpolation between polls
-    useEffect(() => {
-        if (!data?.isPlaying) return;
-
-        const animate = () => {
-            const elapsed = Date.now() - lastUpdateTime.current;
-            const newProgress = Math.min(data.progressMs + elapsed, data.durationMs);
-            setInterpolatedProgress(newProgress);
-            animationRef.current = requestAnimationFrame(animate);
-        };
-
-        animationRef.current = requestAnimationFrame(animate);
-        return () => {
-            if (animationRef.current) cancelAnimationFrame(animationRef.current);
-        };
-    }, [data]);
 
     const baseWidgetClasses = `
         fixed bottom-6 left-1/2 -translate-x-1/2 z-50
@@ -101,7 +80,8 @@ export default function SpotifyNowPlaying() {
         );
     }
 
-    const progressPercent = (interpolatedProgress / data.durationMs) * 100;
+    // Use the fetched progress directly - CSS transition handles the smooth animation
+    const progressPercent = (data.progressMs / data.durationMs) * 100;
 
     const formatTime = (ms: number) => {
         const totalSeconds = Math.floor(ms / 1000);
@@ -166,15 +146,15 @@ export default function SpotifyNowPlaying() {
                     />
                 </div>
 
-                {/* Progress Bar */}
+                {/* Progress Bar - CSS transition handles smooth animation between polls */}
                 <div className="flex items-center gap-2">
                     <span className="text-[10px] font-medium text-gray-400 min-w-[24px] tabular-nums">
-                        {formatTime(interpolatedProgress)}
+                        {formatTime(data.progressMs)}
                     </span>
 
                     <div className="flex-1 h-1 bg-black/10 rounded-full relative group/progress">
                         <div
-                            className="h-full bg-gradient-to-r from-[#1DB954] to-[#1ed760] rounded-full"
+                            className="h-full bg-gradient-to-r from-[#1DB954] to-[#1ed760] rounded-full transition-[width] duration-[10s] ease-linear"
                             style={{ width: `${progressPercent}%` }}
                         />
                         {/* Progress Knob */}
