@@ -1,32 +1,46 @@
 "use client";
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
-export type AnimationMode = "off" | "boids" | "lorenz";
+import { createContext, useContext, useSyncExternalStore, useCallback, type ReactNode } from "react";
+
+type Mode = "off" | "boids" | "lorenz";
 
 interface SimulationContextType {
-    mode: AnimationMode;
-    setMode: (mode: AnimationMode) => void;
+    mode: Mode;
+    setMode: (mode: Mode) => void;
+    isPaused: boolean;
 }
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
 
-export function SimulationProvider({ children }: { children: ReactNode }) {
-    const [mode, setModeState] = useState<AnimationMode>("boids");
+function getStoredMode(): Mode {
+    if (typeof window === "undefined") return "boids";
+    const stored = localStorage.getItem("sim-mode");
+    if (stored === "off" || stored === "boids" || stored === "lorenz") return stored;
+    return "boids";
+}
 
-    useEffect(() => {
-        const stored = localStorage.getItem("sim-mode");
-        if (stored === "off" || stored === "lorenz") {
-            setModeState(stored);
-        }
+function subscribe(callback: () => void): () => void {
+    window.addEventListener("storage", callback);
+    return () => window.removeEventListener("storage", callback);
+}
+
+function getServerSnapshot(): Mode {
+    return "boids";
+}
+
+export function SimulationProvider({ children }: { children: ReactNode }) {
+    const mode = useSyncExternalStore(subscribe, getStoredMode, getServerSnapshot);
+
+    const setMode = useCallback((newMode: Mode) => {
+        localStorage.setItem("sim-mode", newMode);
+        // Dispatch storage event to trigger re-render
+        window.dispatchEvent(new StorageEvent("storage", { key: "sim-mode", newValue: newMode }));
     }, []);
 
-    const setMode = (newMode: AnimationMode) => {
-        localStorage.setItem("sim-mode", newMode);
-        setModeState(newMode);
-    };
+    const isPaused = mode === "off";
 
     return (
-        <SimulationContext.Provider value={{ mode, setMode }}>
+        <SimulationContext.Provider value={{ mode, setMode, isPaused }}>
             {children}
         </SimulationContext.Provider>
     );

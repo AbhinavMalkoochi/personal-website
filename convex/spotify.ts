@@ -103,11 +103,13 @@ async function refreshToken(
     return null;
   }
 
+  const credentials = btoa(`${clientId}:${clientSecret}`);
+  
   const response = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      Authorization: `Basic ${credentials}`,
     },
     body: new URLSearchParams({
       grant_type: "refresh_token",
