@@ -250,7 +250,6 @@ export default function InteractiveBackground() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { mode } = useSimulation();
     const modeRef = useRef(mode);
-    modeRef.current = mode;
 
     const stateRef = useRef<AnimationState>({
         animationId: 0,
@@ -263,6 +262,9 @@ export default function InteractiveBackground() {
     });
 
     useLayoutEffect(() => {
+        // Update ref inside effect, not during render
+        modeRef.current = mode;
+
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -313,7 +315,8 @@ export default function InteractiveBackground() {
             window.removeEventListener("mousemove", handleMouseMove);
             cancelAnimationFrame(state.animationId);
         };
-    }, []);
+    }, [mode]);
+
 
     return (
         <canvas
