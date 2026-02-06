@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation, action, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Doc } from "./_generated/dataModel";
 
@@ -90,35 +90,7 @@ export const updateTokensInternal = internalMutation({
   },
 });
 
-// ============ Public Mutation for Initial Setup ============
-
-export const initializeTokens = mutation({
-  args: {
-    accessToken: v.string(),
-    refreshToken: v.string(),
-    expiresIn: v.number(),
-  },
-  handler: async (ctx, args): Promise<void> => {
-    const expiresAt = Date.now() + args.expiresIn * 1000;
-    const existing = await ctx.db.query("spotifyCredentials").first();
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiresAt,
-      });
-    } else {
-      await ctx.db.insert("spotifyCredentials", {
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiresAt,
-      });
-    }
-  },
-});
-
-// ============ Get Now Playing Action ============
+// ============ Token Refresh ============
 
 async function refreshToken(
   refreshTokenValue: string
@@ -155,6 +127,8 @@ async function refreshToken(
     expiresAt: Date.now() + data.expires_in * 1000,
   };
 }
+
+// ============ Get Now Playing Action ============
 
 export const getNowPlaying = action({
   args: {},
@@ -216,4 +190,3 @@ export const getNowPlaying = action({
     };
   },
 });
-
