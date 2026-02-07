@@ -46,7 +46,12 @@ interface SpotifyCurrentlyPlaying {
 export const currentlyPlaying = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("spotifyNowPlaying").first();
+    const doc = await ctx.db.query("spotifyNowPlaying").first();
+    if (!doc) return null;
+
+    // Strip Convex system fields — only return playback metadata
+    const { _id: _, _creationTime: __, ...playback } = doc;
+    return playback;
   },
 });
 

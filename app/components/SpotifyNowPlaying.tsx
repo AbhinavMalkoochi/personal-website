@@ -25,11 +25,11 @@ function SoundBars() {
 const WIDGET_BASE = `
     fixed bottom-6 left-1/2 -translate-x-1/2 z-50
     flex items-center gap-3 px-4 py-2.5
-    bg-white/80 backdrop-blur-xl
-    border border-white/50 rounded-2xl
-    shadow-[0_8px_32px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.8)]
+    bg-white/90 backdrop-blur-xl
+    border border-white/60 rounded-2xl
+    shadow-[0_8px_32px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.8)]
     transition-all duration-300 ease-out
-    hover:bg-white/90 hover:shadow-[0_12px_40px_rgba(0,0,0,0.15)]
+    hover:bg-white/95 hover:shadow-[0_12px_40px_rgba(0,0,0,0.18)]
     hover:-translate-x-1/2 hover:-translate-y-1
 `;
 
@@ -65,7 +65,7 @@ export default function SpotifyNowPlaying() {
         return (
             <div className={WIDGET_BASE}>
                 <Image src="/Spotify.png" alt="Spotify" width={18} height={18} className="opacity-80" />
-                <span className="text-sm text-gray-500 font-medium">Loading...</span>
+                <span className="text-sm text-gray-600 font-semibold">Loading...</span>
             </div>
         );
     }
@@ -74,7 +74,7 @@ export default function SpotifyNowPlaying() {
         return (
             <div className={WIDGET_BASE}>
                 <Image src="/Spotify.png" alt="Spotify" width={18} height={18} className="opacity-80" />
-                <span className="text-sm text-gray-500 font-medium">Not playing</span>
+                <span className="text-sm text-gray-600 font-semibold">Not playing</span>
             </div>
         );
     }
@@ -90,11 +90,11 @@ export default function SpotifyNowPlaying() {
                 fixed bottom-6 left-1/2 -translate-x-1/2 z-50
                 flex items-center gap-4
                 w-[420px] max-w-[calc(100%-32px)] px-4 py-3
-                bg-white/80 backdrop-blur-xl
-                border border-white/50 rounded-2xl
-                shadow-[0_8px_32px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.8)]
+                bg-white/90 backdrop-blur-xl
+                border border-white/60 rounded-2xl
+                shadow-[0_8px_32px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.8)]
                 transition-all duration-300 ease-out
-                hover:bg-white/90 hover:shadow-[0_16px_48px_rgba(0,0,0,0.15)]
+                hover:bg-white/95 hover:shadow-[0_16px_48px_rgba(0,0,0,0.18)]
                 hover:-translate-x-1/2 hover:-translate-y-1
                 no-underline text-inherit group
             `}
@@ -118,10 +118,10 @@ export default function SpotifyNowPlaying() {
             <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-black truncate leading-tight">
+                        <p className="text-base font-bold text-gray-900 truncate leading-tight">
                             {data.trackName}
                         </p>
-                        <p className="text-xs text-gray-500 truncate leading-tight">
+                        <p className="text-sm text-gray-600 truncate leading-tight">
                             {data.artistName}
                         </p>
                     </div>
@@ -130,7 +130,7 @@ export default function SpotifyNowPlaying() {
                         alt="Spotify"
                         width={20}
                         height={20}
-                        className="opacity-50 group-hover:opacity-80 transition-opacity shrink-0"
+                        className="opacity-60 group-hover:opacity-90 transition-opacity shrink-0"
                     />
                 </div>
 
@@ -138,7 +138,7 @@ export default function SpotifyNowPlaying() {
                 <div className="flex items-center gap-2">
                     <span
                         ref={timeRef}
-                        className="text-[10px] font-medium text-gray-400 min-w-[24px] tabular-nums"
+                        className="text-xs font-semibold text-gray-500 min-w-[28px] tabular-nums"
                     >
                         {formatTime(data.progressMs)}
                     </span>
@@ -156,7 +156,7 @@ export default function SpotifyNowPlaying() {
                         />
                     </div>
 
-                    <span className="text-[10px] font-medium text-gray-400 min-w-[24px] tabular-nums text-right">
+                    <span className="text-xs font-semibold text-gray-500 min-w-[28px] tabular-nums text-right">
                         {formatTime(data.durationMs)}
                     </span>
                 </div>
