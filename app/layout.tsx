@@ -6,6 +6,7 @@ import ModeToggle from "./components/ModeToggle";
 import SpotifyNowPlaying from "./components/SpotifyNowPlaying";
 import { SimulationProvider } from "./context/SimulationContext";
 import { ConvexClientProvider } from "./providers/ConvexClientProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains",
@@ -36,6 +37,7 @@ export default function RootLayout({
             </main>
           </SimulationProvider>
         </ConvexClientProvider>
+        <Analytics />
       </body>
     </html>
   );
