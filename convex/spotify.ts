@@ -1,3 +1,12 @@
+/**
+ * Spotify integration with secure credential handling.
+ *
+ * Security model:
+ * - spotifyCredentials table (tokens) is ONLY accessed by internal functions
+ * - The sole public function (currentlyPlaying) reads from spotifyNowPlaying (metadata only)
+ * - All Spotify API calls happen server-side via cron, never from the client
+ * - Client secrets live in Convex environment variables, never in client bundles
+ */
 import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
