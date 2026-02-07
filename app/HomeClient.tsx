@@ -93,7 +93,7 @@ export default function HomeClient({ projects }: Props) {
                     <h2 className="section-title">Projects</h2>
                     <div className="projects-list">
                         {projects.map((project) => (
-                            <div key={project.slug} className="group relative flex items-center pr-4 border-b border-border last:border-0 hover:bg-black/5 transition-colors rounded-lg -mx-2 px-2">
+                            <div key={project.slug} className="group relative flex items-center pr-4 border-b border-border last:border-0 hover:bg-foreground/5 transition-colors rounded-lg -mx-2 px-2">
                                 <Link
                                     href={`/projects/${project.slug}`}
                                     className="flex-grow py-5 pr-8 flex justify-between items-center group cursor-pointer"
@@ -114,7 +114,7 @@ export default function HomeClient({ projects }: Props) {
                                     href={project.githubUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-2 text-muted hover:text-black hover:bg-black/10 rounded-full transition-all opacity-0 group-hover:opacity-100 flex-shrink-0"
+                                    className="p-2 text-muted hover:text-foreground hover:bg-foreground/10 rounded-full transition-all opacity-0 group-hover:opacity-100 flex-shrink-0"
                                     title="View Source"
                                 >
                                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">

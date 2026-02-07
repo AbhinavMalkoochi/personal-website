@@ -28,7 +28,7 @@ export default async function ProjectPage({ params }: Props) {
             <ModeToggle />
             <div className="page-container animate-in">
                 {/* Back Link */}
-                <Link href="/" className="inline-flex items-center text-sm text-muted hover:text-black mb-12 transition-colors">
+                <Link href="/" className="inline-flex items-center text-sm text-muted hover:text-foreground mb-12 transition-colors">
                     <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M19 12H5M12 19l-7-7 7-7" />
                     </svg>
@@ -43,7 +43,7 @@ export default async function ProjectPage({ params }: Props) {
                             href={meta.githubUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 text-muted hover:text-black transition-colors rounded-full hover:bg-black/5"
+                            className="p-2 text-muted hover:text-foreground transition-colors rounded-full hover:bg-foreground/5"
                             title="View on GitHub"
                         >
                             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">

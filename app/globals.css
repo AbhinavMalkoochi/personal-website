@@ -18,9 +18,11 @@
   --color-subtle: var(--subtle);
   --color-border: var(--border);
   --color-accent: var(--accent);
-  
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-  --font-display: 'Inter', var(--font-sans);
+
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+    Roboto, sans-serif;
+  --font-display: "Inter", var(--font-sans);
   --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
 }
 
@@ -45,6 +47,26 @@ body {
 
 ::selection {
   background: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark background animation modes - seamless color adaptation */
+[data-sim-mode="boids"] .page-container,
+[data-sim-mode="lorenz"] .page-container {
+  --foreground: #f0f0f0;
+  --muted: rgba(255, 255, 255, 0.6);
+  --subtle: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.12);
+  --accent: #ffffff;
+}
+
+[data-sim-mode="boids"] .page-container,
+[data-sim-mode="lorenz"] .page-container {
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-sim-mode="boids"] ::selection,
+[data-sim-mode="lorenz"] ::selection {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Mode Toggle - Sleek Apple-style */
@@ -149,7 +171,7 @@ body {
   font-size: 2.5rem;
   font-weight: 600;
   letter-spacing: -0.03em;
-  color: #000;
+  color: var(--foreground);
   margin-bottom: 8px;
   line-height: 1.1;
 }
@@ -171,7 +193,7 @@ body {
 }
 
 .header-link:hover {
-  color: #000;
+  color: var(--foreground);
 }
 
 .header-link svg {
@@ -227,7 +249,7 @@ body {
 .experience-company {
   font-size: 1rem;
   font-weight: 500;
-  color: #000;
+  color: var(--foreground);
 }
 
 .experience-title {
@@ -285,7 +307,7 @@ body {
 .project-row-name {
   font-size: 1rem;
   font-weight: 500;
-  color: #000;
+  color: var(--foreground);
 }
 
 .project-row-summary {
@@ -323,8 +345,12 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-content {
@@ -340,11 +366,11 @@ body {
 }
 
 @keyframes slideUp {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(20px);
   }
-  to { 
+  to {
     opacity: 1;
     transform: translateY(0);
   }
@@ -414,10 +440,18 @@ body {
   opacity: 0;
 }
 
-.delay-1 { animation-delay: 0.1s; }
-.delay-2 { animation-delay: 0.2s; }
-.delay-3 { animation-delay: 0.3s; }
-.delay-4 { animation-delay: 0.4s; }
+.delay-1 {
+  animation-delay: 0.1s;
+}
+.delay-2 {
+  animation-delay: 0.2s;
+}
+.delay-3 {
+  animation-delay: 0.3s;
+}
+.delay-4 {
+  animation-delay: 0.4s;
+}
 
 /* Chaos Overlay - Interactive */
 .chaos-indicator {
@@ -459,32 +493,32 @@ body {
   .page-container {
     padding: 60px 20px 100px;
   }
-  
+
   .header-section {
     flex-direction: column;
     align-items: center;
     text-align: center;
     gap: 24px;
   }
-  
+
   .header-links {
     justify-content: center;
     flex-wrap: wrap;
   }
-  
+
   .header-name {
     font-size: 2rem;
   }
-  
+
   .profile-picture {
     width: 100px;
     height: 100px;
   }
-  
+
   .projects-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .experience-item {
     flex-direction: column;
     align-items: flex-start;
@@ -519,7 +553,8 @@ body {
 
 /* Spotify animations - keep for Tailwind component */
 @keyframes soundBar {
-  0%, 100% {
+  0%,
+  100% {
     transform: scaleY(1);
   }
   50% {
@@ -528,7 +563,8 @@ body {
 }
 
 @keyframes livePulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
