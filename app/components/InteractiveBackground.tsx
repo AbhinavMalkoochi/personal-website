@@ -2,60 +2,71 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { SimplexNoise } from "@/app/lib/SimplexNoise";
 import { useSimulation } from "../context/SimulationContext";
+
+// ============ Page Config ============
 
 interface PageConfig {
     speedMod: number;
     noiseZoom: number;
     verticalBias: number;
-    colorBase: "blue" | "gold" | "cyan" | "white" | "chaos";
 }
 
 const PAGE_CONFIGS: Record<string, PageConfig> = {
-    "/": { speedMod: 1.0, noiseZoom: 0.05, verticalBias: 0, colorBase: "blue" },
-    "/projects": { speedMod: 1.1, noiseZoom: 0.06, verticalBias: 0, colorBase: "blue" },
-    "/resume": { speedMod: 0.8, noiseZoom: 0.03, verticalBias: 0, colorBase: "blue" },
-    "/blog": { speedMod: 0.7, noiseZoom: 0.04, verticalBias: 0, colorBase: "blue" },
-    "/about": { speedMod: 0.6, noiseZoom: 0.03, verticalBias: 0, colorBase: "blue" },
+    "/": { speedMod: 1.0, noiseZoom: 0.05, verticalBias: 0 },
+    "/projects": { speedMod: 1.1, noiseZoom: 0.06, verticalBias: 0 },
+    "/resume": { speedMod: 0.8, noiseZoom: 0.03, verticalBias: 0 },
+    "/blog": { speedMod: 0.7, noiseZoom: 0.04, verticalBias: 0 },
+    "/about": { speedMod: 0.6, noiseZoom: 0.03, verticalBias: 0 },
 };
-
-const DEFAULT_CONFIG = PAGE_CONFIGS["/"];
 
 function getPageConfig(pathname: string): PageConfig {
     if (PAGE_CONFIGS[pathname]) return PAGE_CONFIGS[pathname];
     for (const key of Object.keys(PAGE_CONFIGS)) {
         if (pathname.startsWith(key) && key !== "/") return PAGE_CONFIGS[key];
     }
-    return DEFAULT_CONFIG;
+    return PAGE_CONFIGS["/"];
 }
 
-function getParticleColor(config: PageConfig, speed: number): { r: number; g: number; b: number; a: number } {
-    const norm = Math.min(speed / 3, 1);
-    let r: number, g: number, b: number;
+// ============ Dynamic Color System ============
 
-    switch (config.colorBase) {
-        case "gold":
-            r = 255;
-            g = 215;
-            b = Math.floor(norm * 100);
-            break;
-        case "cyan":
-            r = 0;
-            g = Math.floor(200 + norm * 55);
-            b = 255;
-            break;
-        case "white":
-            r = g = b = 200;
-            break;
-        default:
-            r = Math.floor(50 + norm * 100);
-            g = Math.floor(50 + norm * 100);
-            b = Math.floor(200 + norm * 55);
+function hashToHue(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
-
-    return { r, g, b, a: 0.4 + norm * 0.6 };
+    return ((hash % 360) + 360) % 360;
 }
+
+function getTimeOfDayHue(): number {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) return 30 + ((hour - 6) / 6) * 30;   // morning: amber
+    if (hour >= 12 && hour < 17) return 200 + ((hour - 12) / 5) * 40; // afternoon: blue
+    if (hour >= 17 && hour < 21) return 280 + ((hour - 17) / 4) * 50; // evening: purple
+    const nightHour = hour >= 21 ? hour - 21 : hour + 3;
+    return 220 + (nightHour / 9) * 40;                                 // night: deep blue
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+    h /= 360;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n: number) => {
+        const k = (n + h * 12) % 12;
+        return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    };
+    return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+}
+
+function getParticleColor(hue: number, speed: number): string {
+    const norm = Math.min(speed / 3, 1);
+    const [r, g, b] = hslToRgb(hue, 0.5 + norm * 0.3, 0.4 + norm * 0.2);
+    return `rgba(${r},${g},${b},${0.4 + norm * 0.6})`;
+}
+
+// ============ Constants ============
 
 const PARTICLE_COUNT = 1500;
 const CHAOS_PARTICLE_COUNT = 30;
@@ -63,76 +74,55 @@ const SCALE = 25;
 const LORENZ_SIGMA = 10;
 const LORENZ_RHO = 28;
 const LORENZ_BETA = 8 / 3;
+const PULSE_DURATION_MS = 2000;
+const PULSE_SPEED_BOOST = 1.8;
+
+// ============ Particle Types ============
 
 interface FlowParticle {
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    baseSpeed: number;
+    x: number; y: number; vx: number; vy: number; baseSpeed: number;
 }
 
 interface ChaosParticle {
-    x: number;
-    y: number;
-    z: number;
-    hue: number;
+    x: number; y: number; z: number; hueOffset: number;
     history: { x: number; y: number; z: number }[];
 }
 
-function createFlowParticle(width: number, height: number): FlowParticle {
-    return {
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: 0,
-        vy: 0,
-        baseSpeed: 1 + Math.random(),
-    };
+function createFlowParticle(w: number, h: number): FlowParticle {
+    return { x: Math.random() * w, y: Math.random() * h, vx: 0, vy: 0, baseSpeed: 1 + Math.random() };
 }
 
 function createChaosParticle(): ChaosParticle {
     return {
-        x: 0.1 + (Math.random() - 0.5) * 0.1,
-        y: 0,
-        z: 0,
-        hue: Math.random() * 60 + 10,
-        history: [],
+        x: 0.1 + (Math.random() - 0.5) * 0.1, y: 0, z: 0,
+        hueOffset: Math.random() * 60 - 30, history: [],
     };
 }
 
+// ============ Particle Physics ============
+
 function updateFlowParticle(
-    p: FlowParticle,
-    flowField: number[],
-    cols: number,
-    scale: number,
-    config: PageConfig,
-    mouse: { x: number; y: number; active: boolean },
-    width: number,
-    height: number,
+    p: FlowParticle, flowField: number[], cols: number, scale: number,
+    config: PageConfig, mouse: { x: number; y: number; active: boolean },
+    width: number, height: number,
 ): void {
     const xCol = Math.max(0, Math.min(Math.floor(p.x / scale), cols - 1));
     const yRow = Math.max(0, Math.min(Math.floor(p.y / scale), Math.floor(height / scale)));
-
-    const index = xCol + yRow * cols;
-    let angle = flowField[index] || 0;
+    let angle = flowField[xCol + yRow * cols] || 0;
 
     if (config.verticalBias > 0) {
-        const biasStrength = 0.1;
-        const target = Math.PI / 2;
-        angle = angle * (1 - biasStrength) + target * biasStrength;
+        angle = angle * 0.9 + (Math.PI / 2) * 0.1;
     }
 
     if (mouse.active) {
         const dx = mouse.x - p.x;
         const dy = mouse.y - p.y;
         const distSq = dx * dx + dy * dy;
-        const MOUSE_RADIUS = 20000;
-
-        if (distSq < MOUSE_RADIUS) {
-            const angleToMouse = Math.atan2(dy, dx) + Math.PI;
-            const force = (MOUSE_RADIUS - distSq) / MOUSE_RADIUS;
-            p.vx += Math.cos(angleToMouse) * 0.2 * force;
-            p.vy += Math.sin(angleToMouse) * 0.2 * force;
+        if (distSq < 20000) {
+            const force = (20000 - distSq) / 20000;
+            const mouseAngle = Math.atan2(dy, dx) + Math.PI;
+            p.vx += Math.cos(mouseAngle) * 0.2 * force;
+            p.vy += Math.sin(mouseAngle) * 0.2 * force;
         }
     }
 
@@ -158,51 +148,42 @@ function updateFlowParticle(
 
 function updateChaosParticle(p: ChaosParticle): void {
     const dt = 0.006;
-    const dx = LORENZ_SIGMA * (p.y - p.x) * dt;
-    const dy = (p.x * (LORENZ_RHO - p.z) - p.y) * dt;
-    const dz = (p.x * p.y - LORENZ_BETA * p.z) * dt;
-
-    p.x += dx;
-    p.y += dy;
-    p.z += dz;
-
+    p.x += LORENZ_SIGMA * (p.y - p.x) * dt;
+    p.y += (p.x * (LORENZ_RHO - p.z) - p.y) * dt;
+    p.z += (p.x * p.y - LORENZ_BETA * p.z) * dt;
     p.history.push({ x: p.x, y: p.y, z: p.z });
     if (p.history.length > 50) p.history.shift();
 }
 
 function drawChaosParticle(
-    ctx: CanvasRenderingContext2D,
-    p: ChaosParticle,
-    rotY: number,
-    cx: number,
-    cy: number
+    ctx: CanvasRenderingContext2D, p: ChaosParticle,
+    rotY: number, cx: number, cy: number, baseHue: number,
 ): void {
-    const scale = 15;
+    const hue = (baseHue + p.hueOffset + 360) % 360;
     ctx.beginPath();
-    ctx.strokeStyle = `hsla(${p.hue}, 80%, 60%, 0.5)`;
+    ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.5)`;
     ctx.lineWidth = 1;
 
     for (let i = 0; i < p.history.length; i++) {
         const pt = p.history[i];
         const rx = pt.x * Math.cos(rotY) - pt.z * Math.sin(rotY);
         const rz = pt.x * Math.sin(rotY) + pt.z * Math.cos(rotY);
-        const projX = cx + rx * scale;
-        const projY = cy - pt.y * scale + rz * 0.5;
-
-        if (i === 0) {
-            ctx.moveTo(projX, projY);
-        } else {
-            ctx.lineTo(projX, projY);
-        }
+        const px = cx + rx * 15;
+        const py = cy - pt.y * 15 + rz * 0.5;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
     }
     ctx.stroke();
 }
+
+// ============ Component ============
 
 export default function InteractiveBackground() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const pathname = usePathname();
     const { mode, isPaused } = useSimulation();
-    
+    const nowPlaying = useQuery(api.spotify.currentlyPlaying);
+
     const stateRef = useRef({
         animationId: 0,
         mouse: { x: 0, y: 0, active: false },
@@ -212,60 +193,69 @@ export default function InteractiveBackground() {
         zOffset: 0,
         dimensions: { width: 0, height: 0, cols: 0, rows: 0 },
         chaosInitialized: false,
+        lastTrackName: "",
+        pulseUntil: 0,
+        baseHue: getTimeOfDayHue(),
     });
 
+    // Store latest now-playing in ref for animation loop access + detect song changes
+    const nowPlayingRef = useRef(nowPlaying);
+    useEffect(() => {
+        nowPlayingRef.current = nowPlaying;
+        const state = stateRef.current;
+        const trackName = nowPlaying?.trackName ?? "";
+        if (trackName && trackName !== state.lastTrackName && state.lastTrackName !== "") {
+            state.pulseUntil = Date.now() + PULSE_DURATION_MS;
+        }
+        state.lastTrackName = trackName;
+    }, [nowPlaying]);
+
+    // Canvas setup (runs once)
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-
         const state = stateRef.current;
 
         const resize = () => {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
-
-            const cols = Math.floor(width / SCALE) + 1;
-            const rows = Math.floor(height / SCALE) + 1;
-
-            state.dimensions = { width, height, cols, rows };
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            canvas.width = w;
+            canvas.height = h;
+            const cols = Math.floor(w / SCALE) + 1;
+            const rows = Math.floor(h / SCALE) + 1;
+            state.dimensions = { width: w, height: h, cols, rows };
             state.flowField = new Array(cols * rows);
-            state.particles = Array.from({ length: PARTICLE_COUNT }, () => createFlowParticle(width, height));
+            state.particles = Array.from({ length: PARTICLE_COUNT }, () => createFlowParticle(w, h));
         };
 
-        const handleMouseMove = (e: MouseEvent) => {
+        const onMouseMove = (e: MouseEvent) => {
             state.mouse = { x: e.clientX, y: e.clientY, active: true };
         };
 
         resize();
         window.addEventListener("resize", resize);
-        window.addEventListener("mousemove", handleMouseMove);
-
+        window.addEventListener("mousemove", onMouseMove);
         return () => {
             window.removeEventListener("resize", resize);
-            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mousemove", onMouseMove);
         };
     }, []);
 
+    // Lorenz particle initialization
     useEffect(() => {
         const state = stateRef.current;
-        const isLorenzMode = mode === "lorenz";
-
-        if (isLorenzMode && !state.chaosInitialized) {
+        if (mode === "lorenz" && !state.chaosInitialized) {
             state.chaosParticles = [];
             state.chaosInitialized = true;
-            
             for (let i = 0; i < CHAOS_PARTICLE_COUNT; i++) {
-                setTimeout(() => {
-                    state.chaosParticles.push(createChaosParticle());
-                }, i * 50);
+                setTimeout(() => state.chaosParticles.push(createChaosParticle()), i * 50);
             }
-        } else if (!isLorenzMode) {
+        } else if (mode !== "lorenz") {
             state.chaosInitialized = false;
         }
     }, [mode]);
 
+    // Main animation loop
     useEffect(() => {
         if (isPaused) {
             const id = stateRef.current.animationId;
@@ -275,28 +265,39 @@ export default function InteractiveBackground() {
 
         const canvas = canvasRef.current;
         if (!canvas) return;
-
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
         const state = stateRef.current;
-        const isLorenzMode = mode === "lorenz";
+        const isLorenz = mode === "lorenz";
         const config = getPageConfig(pathname);
 
         const animate = (timestamp: number) => {
             const { width, height, cols, rows } = state.dimensions;
+            const track = nowPlayingRef.current;
 
-            ctx.fillStyle = isLorenzMode ? "rgba(5, 5, 5, 0.15)" : "rgba(0, 0, 0, 0.2)";
+            // Dynamic hue: song overrides time-of-day
+            const hue = track?.trackName ? hashToHue(track.trackName) : state.baseHue;
+
+            // Pulse: boost speed on song change
+            const pulseActive = Date.now() < state.pulseUntil;
+            const pulseFade = pulseActive
+                ? (state.pulseUntil - Date.now()) / PULSE_DURATION_MS
+                : 0;
+            const speedMultiplier = 1 + pulseFade * (PULSE_SPEED_BOOST - 1);
+
+            // Clear with trail effect
+            ctx.fillStyle = isLorenz ? "rgba(5,5,5,0.15)" : "rgba(0,0,0,0.2)";
             ctx.fillRect(0, 0, width, height);
 
-            if (isLorenzMode) {
+            if (isLorenz) {
                 const rotY = (state.mouse.x / width) * Math.PI * 4 + timestamp * 0.0002;
                 const cx = width / 2;
                 const cy = height / 2;
 
                 for (const p of state.chaosParticles) {
                     updateChaosParticle(p);
-                    drawChaosParticle(ctx, p, rotY, cx, cy);
+                    drawChaosParticle(ctx, p, rotY, cx, cy, hue);
                 }
 
                 if (Math.random() > 0.97 && state.chaosParticles.length < 50) {
@@ -305,25 +306,20 @@ export default function InteractiveBackground() {
             } else {
                 const zoom = config.noiseZoom;
                 let yOff = 0;
-
                 for (let y = 0; y < rows; y++) {
                     let xOff = 0;
                     for (let x = 0; x < cols; x++) {
-                        const index = x + y * cols;
-                        const angle = SimplexNoise.noise2D(xOff, yOff + state.zOffset) * Math.PI * 4;
-                        state.flowField[index] = angle;
+                        state.flowField[x + y * cols] = SimplexNoise.noise2D(xOff, yOff + state.zOffset) * Math.PI * 4;
                         xOff += zoom;
                     }
                     yOff += zoom;
                 }
-                state.zOffset += 0.003 * config.speedMod;
+                state.zOffset += 0.003 * config.speedMod * speedMultiplier;
 
                 for (const p of state.particles) {
                     updateFlowParticle(p, state.flowField, cols, SCALE, config, state.mouse, width, height);
-                    
                     const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-                    const color = getParticleColor(config, speed);
-                    ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
+                    ctx.fillStyle = getParticleColor(hue, speed * speedMultiplier);
                     ctx.fillRect(p.x, p.y, 1.5, 1.5);
                 }
             }
@@ -332,12 +328,7 @@ export default function InteractiveBackground() {
         };
 
         state.animationId = requestAnimationFrame(animate);
-
-        return () => {
-            if (state.animationId) {
-                cancelAnimationFrame(state.animationId);
-            }
-        };
+        return () => { if (state.animationId) cancelAnimationFrame(state.animationId); };
     }, [pathname, isPaused, mode]);
 
     return (
