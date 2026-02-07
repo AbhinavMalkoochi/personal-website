@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cinzel_Decorative, Playfair_Display, JetBrains_Mono, Caveat } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import InteractiveBackground from "./components/InteractiveBackground";
 import ModeToggle from "./components/ModeToggle";
@@ -7,27 +7,8 @@ import SpotifyNowPlaying from "./components/SpotifyNowPlaying";
 import { SimulationProvider } from "./context/SimulationContext";
 import { ConvexClientProvider } from "./providers/ConvexClientProvider";
 
-const cinzel = Cinzel_Decorative({
-  variable: "--font-cinzel",
-  subsets: ["latin"],
-  weight: ["400", "700", "900"],
-  display: "swap",
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  display: "swap",
-});
-
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const caveat = Caveat({
-  variable: "--font-caveat",
   subsets: ["latin"],
   display: "swap",
 });
@@ -44,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${cinzel.variable} ${playfair.variable} ${jetbrainsMono.variable} ${caveat.variable} antialiased`}>
+      <body className={`${jetbrainsMono.variable} antialiased`}>
         <ConvexClientProvider>
           <SimulationProvider>
             <InteractiveBackground />

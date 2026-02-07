@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
-type Mode = "off" | "boids" | "lorenz";
+export type Mode = "off" | "boids" | "lorenz";
 
 interface SimulationContextType {
     mode: Mode;
