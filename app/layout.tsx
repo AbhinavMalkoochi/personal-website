@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Cinzel_Decorative, Playfair_Display, JetBrains_Mono, Caveat } from "next/font/google";
 import "./globals.css";
 import InteractiveBackground from "./components/InteractiveBackground";
+import ModeToggle from "./components/ModeToggle";
+import SpotifyNowPlaying from "./components/SpotifyNowPlaying";
 import { SimulationProvider } from "./context/SimulationContext";
 import { ConvexClientProvider } from "./providers/ConvexClientProvider";
 
@@ -46,6 +48,8 @@ export default function RootLayout({
         <ConvexClientProvider>
           <SimulationProvider>
             <InteractiveBackground />
+            <ModeToggle />
+            <SpotifyNowPlaying />
             <main className="main-content">
               {children}
             </main>

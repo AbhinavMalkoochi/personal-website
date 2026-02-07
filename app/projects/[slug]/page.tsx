@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProjectContent, getAllProjects } from "@/app/lib/projects";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import ModeToggle from "@/app/components/ModeToggle";
 
 interface Props {
     params: Promise<{ slug: string }>;
@@ -24,9 +23,7 @@ export default async function ProjectPage({ params }: Props) {
     const { meta, content } = project;
 
     return (
-        <>
-            <ModeToggle />
-            <div className="page-container animate-in">
+        <div className="page-container animate-in">
                 {/* Back Link */}
                 <Link href="/" className="inline-flex items-center text-sm text-muted hover:text-foreground mb-12 transition-colors">
                     <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -64,6 +61,5 @@ export default async function ProjectPage({ params }: Props) {
                     </div>
                 </div>
             </div>
-        </>
     );
 }

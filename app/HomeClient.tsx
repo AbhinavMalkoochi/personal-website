@@ -2,8 +2,6 @@
 
 import { type ProjectMeta } from "./lib/projects";
 import Link from "next/link";
-import ModeToggle from "./components/ModeToggle";
-import SpotifyNowPlaying from "./components/SpotifyNowPlaying";
 
 const experiences = [
     { company: "'Sup", title: "Full Stack Intern" },
@@ -17,11 +15,7 @@ interface Props {
 
 export default function HomeClient({ projects }: Props) {
     return (
-        <>
-            <ModeToggle />
-            <SpotifyNowPlaying />
-
-            <div className="page-container">
+        <div className="page-container">
                 {/* Header Section */}
                 <header className="header-section animate-in">
                     <div className="profile-picture">
@@ -96,13 +90,13 @@ export default function HomeClient({ projects }: Props) {
                             <div key={project.slug} className="group relative flex items-center pr-4 border-b border-border last:border-0 hover:bg-foreground/5 transition-colors rounded-lg -mx-2 px-2">
                                 <Link
                                     href={`/projects/${project.slug}`}
-                                    className="flex-grow py-5 pr-8 flex justify-between items-center group cursor-pointer"
+                                    className="grow py-5 pr-8 flex justify-between items-center group cursor-pointer"
                                 >
                                     <div className="flex flex-col gap-1">
                                         <span className="text-base font-medium text-foreground">{project.name}</span>
                                         <span className="text-sm text-muted">{project.summary}</span>
                                     </div>
-                                    <div className="flex gap-2 flex-shrink-0">
+                                    <div className="flex gap-2 shrink-0">
                                         {project.tech.map(t => (
                                             <span key={t} className="tag">{t}</span>
                                         ))}
@@ -114,7 +108,7 @@ export default function HomeClient({ projects }: Props) {
                                     href={project.githubUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-2 text-muted hover:text-foreground hover:bg-foreground/10 rounded-full transition-all opacity-0 group-hover:opacity-100 flex-shrink-0"
+                                    className="p-2 text-muted hover:text-foreground hover:bg-foreground/10 rounded-full transition-all opacity-0 group-hover:opacity-100 shrink-0"
                                     title="View Source"
                                 >
                                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -126,6 +120,5 @@ export default function HomeClient({ projects }: Props) {
                     </div>
                 </section>
             </div>
-        </>
     );
 }
