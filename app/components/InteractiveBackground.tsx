@@ -14,10 +14,10 @@ interface PageConfig {
 
 const PAGE_CONFIGS: Record<string, PageConfig> = {
     "/": { speedMod: 1.0, noiseZoom: 0.05, verticalBias: 0, colorBase: "blue" },
-    "/projects": { speedMod: 1.8, noiseZoom: 0.1, verticalBias: 0, colorBase: "gold" },
-    "/resume": { speedMod: 0.8, noiseZoom: 0.02, verticalBias: 2.0, colorBase: "cyan" },
-    "/blog": { speedMod: 0.6, noiseZoom: 0.03, verticalBias: 0, colorBase: "white" },
-    "/about": { speedMod: 0.5, noiseZoom: 0.01, verticalBias: 0, colorBase: "white" },
+    "/projects": { speedMod: 1.1, noiseZoom: 0.06, verticalBias: 0, colorBase: "blue" },
+    "/resume": { speedMod: 0.8, noiseZoom: 0.03, verticalBias: 0, colorBase: "blue" },
+    "/blog": { speedMod: 0.7, noiseZoom: 0.04, verticalBias: 0, colorBase: "blue" },
+    "/about": { speedMod: 0.6, noiseZoom: 0.03, verticalBias: 0, colorBase: "blue" },
 };
 
 const DEFAULT_CONFIG = PAGE_CONFIGS["/"];
@@ -109,7 +109,6 @@ function updateFlowParticle(
     mouse: { x: number; y: number; active: boolean },
     width: number,
     height: number,
-    isProjectsPage: boolean
 ): void {
     const xCol = Math.max(0, Math.min(Math.floor(p.x / scale), cols - 1));
     const yRow = Math.max(0, Math.min(Math.floor(p.y / scale), Math.floor(height / scale)));
@@ -127,21 +126,13 @@ function updateFlowParticle(
         const dx = mouse.x - p.x;
         const dy = mouse.y - p.y;
         const distSq = dx * dx + dy * dy;
-        const radius = isProjectsPage ? 40000 : 20000;
+        const MOUSE_RADIUS = 20000;
 
-        if (distSq < radius) {
-            const angleToMouse = Math.atan2(dy, dx);
-            const force = (radius - distSq) / radius;
-
-            if (isProjectsPage) {
-                angle = angleToMouse;
-                p.vx += Math.cos(angle) * 0.5 * force;
-                p.vy += Math.sin(angle) * 0.5 * force;
-            } else {
-                angle = angleToMouse + Math.PI;
-                p.vx += Math.cos(angle) * 0.2 * force;
-                p.vy += Math.sin(angle) * 0.2 * force;
-            }
+        if (distSq < MOUSE_RADIUS) {
+            const angleToMouse = Math.atan2(dy, dx) + Math.PI;
+            const force = (MOUSE_RADIUS - distSq) / MOUSE_RADIUS;
+            p.vx += Math.cos(angleToMouse) * 0.2 * force;
+            p.vy += Math.sin(angleToMouse) * 0.2 * force;
         }
     }
 
@@ -290,7 +281,6 @@ export default function InteractiveBackground() {
 
         const state = stateRef.current;
         const isLorenzMode = mode === "lorenz";
-        const isProjectsPage = pathname === "/projects";
         const config = getPageConfig(pathname);
 
         const animate = (timestamp: number) => {
@@ -329,7 +319,7 @@ export default function InteractiveBackground() {
                 state.zOffset += 0.003 * config.speedMod;
 
                 for (const p of state.particles) {
-                    updateFlowParticle(p, state.flowField, cols, SCALE, config, state.mouse, width, height, isProjectsPage);
+                    updateFlowParticle(p, state.flowField, cols, SCALE, config, state.mouse, width, height);
                     
                     const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
                     const color = getParticleColor(config, speed);
