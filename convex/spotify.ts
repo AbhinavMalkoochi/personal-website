@@ -1,9 +1,9 @@
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { Doc } from "./_generated/dataModel";
+import type { Doc } from "./_generated/dataModel";
 
-// ============ Types ============
+// ============ Spotify API Types ============
 
 interface SpotifyTokenResponse {
   access_token: string;
@@ -13,87 +13,97 @@ interface SpotifyTokenResponse {
   scope: string;
 }
 
-interface SpotifyImage {
-  url: string;
-  height: number;
-  width: number;
-}
-
-interface SpotifyArtist {
-  name: string;
-  external_urls: { spotify: string };
-}
-
-interface SpotifyAlbum {
-  name: string;
-  images: SpotifyImage[];
-  external_urls: { spotify: string };
-}
-
 interface SpotifyTrack {
   name: string;
-  artists: SpotifyArtist[];
-  album: SpotifyAlbum;
+  artists: { name: string; external_urls: { spotify: string } }[];
+  album: {
+    name: string;
+    images: { url: string; height: number; width: number }[];
+    external_urls: { spotify: string };
+  };
   duration_ms: number;
   external_urls: { spotify: string };
-  type: "track";
 }
 
-interface SpotifyCurrentlyPlayingResponse {
+interface SpotifyCurrentlyPlaying {
   is_playing: boolean;
   progress_ms: number;
   currently_playing_type: "track" | "episode" | "ad" | "unknown";
   item: SpotifyTrack | null;
 }
 
-export interface NowPlayingData {
-  isPlaying: boolean;
-  trackName: string;
-  artistName: string;
-  albumName: string;
-  albumArt: string;
-  trackUrl: string;
-  progressMs: number;
-  durationMs: number;
-}
+// ============ Public Query (client subscribes to this) ============
 
-// ============ Internal Queries/Mutations ============
+export const currentlyPlaying = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("spotifyNowPlaying").first();
+  },
+});
 
-export const getCredentialsInternal = internalQuery({
+// ============ Internal: Credential Management ============
+
+export const getCredentials = internalQuery({
   args: {},
   handler: async (ctx): Promise<Doc<"spotifyCredentials"> | null> => {
     return await ctx.db.query("spotifyCredentials").first();
   },
 });
 
-export const updateTokensInternal = internalMutation({
+export const updateTokens = internalMutation({
   args: {
     accessToken: v.string(),
     refreshToken: v.string(),
     expiresAt: v.number(),
   },
-  handler: async (ctx, args): Promise<void> => {
+  handler: async (ctx, args) => {
     const existing = await ctx.db.query("spotifyCredentials").first();
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiresAt: args.expiresAt,
-      });
+      await ctx.db.patch(existing._id, args);
     } else {
-      await ctx.db.insert("spotifyCredentials", {
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiresAt: args.expiresAt,
-      });
+      await ctx.db.insert("spotifyCredentials", args);
+    }
+  },
+});
+
+// ============ Internal: Now Playing Cache ============
+
+export const updateNowPlaying = internalMutation({
+  args: {
+    isPlaying: v.boolean(),
+    trackName: v.string(),
+    artistName: v.string(),
+    albumName: v.string(),
+    albumArt: v.string(),
+    trackUrl: v.string(),
+    progressMs: v.number(),
+    durationMs: v.number(),
+    fetchedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("spotifyNowPlaying").first();
+    if (existing) {
+      await ctx.db.patch(existing._id, args);
+    } else {
+      await ctx.db.insert("spotifyNowPlaying", args);
+    }
+  },
+});
+
+export const clearNowPlaying = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db.query("spotifyNowPlaying").first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
     }
   },
 });
 
 // ============ Token Refresh ============
 
-async function refreshToken(
-  refreshTokenValue: string
+async function refreshAccessToken(
+  refreshTokenValue: string,
 ): Promise<{ accessToken: string; refreshToken: string; expiresAt: number } | null> {
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
@@ -103,13 +113,11 @@ async function refreshToken(
     return null;
   }
 
-  const credentials = btoa(`${clientId}:${clientSecret}`);
-  
   const response = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${credentials}`,
+      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
     },
     body: new URLSearchParams({
       grant_type: "refresh_token",
@@ -130,65 +138,57 @@ async function refreshToken(
   };
 }
 
-// ============ Get Now Playing Action ============
+// ============ Cron: Poll Spotify API ============
 
-export const getNowPlaying = action({
+export const pollNowPlaying = internalAction({
   args: {},
-  handler: async (ctx): Promise<NowPlayingData | null> => {
-    let credentials = await ctx.runQuery(internal.spotify.getCredentialsInternal);
+  handler: async (ctx) => {
+    let credentials = await ctx.runQuery(internal.spotify.getCredentials);
+    if (!credentials) return;
 
-    if (!credentials) {
-      return null;
-    }
-
-    // Refresh token if expired or expiring within 5 minutes
+    // Refresh token if expiring within 5 minutes
     const REFRESH_BUFFER_MS = 5 * 60 * 1000;
     if (credentials.expiresAt < Date.now() + REFRESH_BUFFER_MS) {
-      const newTokens = await refreshToken(credentials.refreshToken);
-      if (!newTokens) {
-        return null;
-      }
-      await ctx.runMutation(internal.spotify.updateTokensInternal, newTokens);
+      const newTokens = await refreshAccessToken(credentials.refreshToken);
+      if (!newTokens) return;
+      await ctx.runMutation(internal.spotify.updateTokens, newTokens);
       credentials = { ...credentials, ...newTokens };
     }
 
     const response = await fetch(
       "https://api.spotify.com/v1/me/player/currently-playing",
-      {
-        headers: {
-          Authorization: `Bearer ${credentials.accessToken}`,
-        },
-      }
+      { headers: { Authorization: `Bearer ${credentials.accessToken}` } },
     );
 
-    // 204 = No content (nothing playing)
+    // 204 = nothing playing
     if (response.status === 204) {
-      return null;
+      await ctx.runMutation(internal.spotify.clearNowPlaying);
+      return;
     }
 
     if (!response.ok) {
       console.error("Spotify API error:", response.status);
-      return null;
+      return;
     }
 
-    const data: SpotifyCurrentlyPlayingResponse = await response.json();
+    const data: SpotifyCurrentlyPlaying = await response.json();
 
-    // Only handle tracks (not episodes/ads)
     if (!data.item || data.currently_playing_type !== "track") {
-      return null;
+      await ctx.runMutation(internal.spotify.clearNowPlaying);
+      return;
     }
 
     const track = data.item;
-
-    return {
+    await ctx.runMutation(internal.spotify.updateNowPlaying, {
       isPlaying: data.is_playing,
       trackName: track.name,
       artistName: track.artists.map((a) => a.name).join(", "),
-      durationMs: track.duration_ms,
       albumName: track.album.name,
       albumArt: track.album.images[0]?.url ?? "",
       trackUrl: track.external_urls.spotify,
       progressMs: data.progress_ms,
-    };
+      durationMs: track.duration_ms,
+      fetchedAt: Date.now(),
+    });
   },
 });

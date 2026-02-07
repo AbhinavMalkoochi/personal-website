@@ -5,6 +5,18 @@ export default defineSchema({
   spotifyCredentials: defineTable({
     accessToken: v.string(),
     refreshToken: v.string(),
-    expiresAt: v.number(), // Unix timestamp in ms
+    expiresAt: v.number(),
+  }),
+
+  spotifyNowPlaying: defineTable({
+    isPlaying: v.boolean(),
+    trackName: v.string(),
+    artistName: v.string(),
+    albumName: v.string(),
+    albumArt: v.string(),
+    trackUrl: v.string(),
+    progressMs: v.number(),
+    durationMs: v.number(),
+    fetchedAt: v.number(),
   }),
 });
