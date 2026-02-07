@@ -12,14 +12,22 @@ interface SimulationContextType {
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
 
-function readStoredMode(): Mode {
-    if (typeof window === "undefined") return "boids";
-    const stored = localStorage.getItem("sim-mode");
-    return stored === "off" || stored === "boids" || stored === "lorenz" ? stored : "boids";
+const DEFAULT_MODE: Mode = "boids";
+
+function isValidMode(value: string | null): value is Mode {
+    return value === "off" || value === "boids" || value === "lorenz";
 }
 
 export function SimulationProvider({ children }: { children: ReactNode }) {
-    const [mode, setModeState] = useState<Mode>(readStoredMode);
+    const [mode, setModeState] = useState<Mode>(DEFAULT_MODE);
+
+    // Hydrate from localStorage after mount (avoids SSR mismatch)
+    useEffect(() => {
+        const stored = localStorage.getItem("sim-mode");
+        if (isValidMode(stored) && stored !== DEFAULT_MODE) {
+            setModeState(stored);
+        }
+    }, []);
 
     // Sync mode to HTML element for CSS-driven color adaptation
     useEffect(() => {
