@@ -2,11 +2,11 @@
 name: "MCP Code"
 summary: "On-demand tool loading for AI agents."
 tech: ["TypeScript", "AI", "MCP"]
-githubUrl: "https://github.com/AbhinavMalkoochi/mcp-code"
+githubUrl: "https://github.com/AbhinavMalkoochi/code-mcp"
 ---
 
 Based on anthropic research on code execution with MCP's that reduced context by 90%. The idea was to convert MCP servers into TS files that could be progressively discovered by the LLMs through file system traversal.
 
-<br/>
+<br />
 
 I created a few scripts that would take MCP servers, add them to a servers folder, and for each server, list all the tools available in a TS file. These files simply call the MCP server via stdio with function doc headers.
