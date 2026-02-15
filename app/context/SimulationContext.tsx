@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useSyncExternalStore, type ReactNode } from "react";
 
 export type Mode = "off" | "boids" | "lorenz";
 
@@ -13,30 +13,33 @@ interface SimulationContextType {
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
 
 const DEFAULT_MODE: Mode = "boids";
+const STORAGE_KEY = "sim-mode";
+const MODE_EVENT = "sim-mode-change";
 
 function isValidMode(value: string | null): value is Mode {
     return value === "off" || value === "boids" || value === "lorenz";
 }
 
 export function SimulationProvider({ children }: { children: ReactNode }) {
-    const [mode, setModeState] = useState<Mode>(DEFAULT_MODE);
-
-    // Hydrate from localStorage after mount (avoids SSR mismatch)
-    useEffect(() => {
-        const stored = localStorage.getItem("sim-mode");
-        if (isValidMode(stored) && stored !== DEFAULT_MODE) {
-            setModeState(stored);
-        }
-    }, []);
-
-    // Sync mode to HTML element for CSS-driven color adaptation
-    useEffect(() => {
-        document.documentElement.dataset.simMode = mode;
-    }, [mode]);
+    const mode = useSyncExternalStore(
+        (onStoreChange) => {
+            window.addEventListener("storage", onStoreChange);
+            window.addEventListener(MODE_EVENT, onStoreChange);
+            return () => {
+                window.removeEventListener("storage", onStoreChange);
+                window.removeEventListener(MODE_EVENT, onStoreChange);
+            };
+        },
+        () => {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return isValidMode(stored) ? stored : DEFAULT_MODE;
+        },
+        () => DEFAULT_MODE,
+    );
 
     const setMode = (newMode: Mode) => {
-        localStorage.setItem("sim-mode", newMode);
-        setModeState(newMode);
+        localStorage.setItem(STORAGE_KEY, newMode);
+        window.dispatchEvent(new Event(MODE_EVENT));
     };
 
     return (
