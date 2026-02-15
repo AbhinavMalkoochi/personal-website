@@ -23,6 +23,7 @@ interface SpotifyTokenResponse {
 }
 
 interface SpotifyTrack {
+  id?: string | null;
   name: string;
   artists: { name: string; external_urls: { spotify: string } }[];
   album: {
@@ -36,9 +37,26 @@ interface SpotifyTrack {
 
 interface SpotifyCurrentlyPlaying {
   is_playing: boolean;
-  progress_ms: number;
+  progress_ms: number | null;
   currently_playing_type: "track" | "episode" | "ad" | "unknown";
   item: SpotifyTrack | null;
+}
+
+interface NowPlayingSnapshot {
+  isPlaying: boolean;
+  trackName: string;
+  artistName: string;
+  albumName: string;
+  albumArt: string;
+  trackUrl?: string | null;
+  trackId?: string;
+  progressMs: number;
+  durationMs: number;
+  fetchedAt: number;
+}
+
+function toOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
 }
 
 // ============ Public Query (client subscribes to this) ============
@@ -49,9 +67,18 @@ export const currentlyPlaying = query({
     const doc = await ctx.db.query("spotifyNowPlaying").first();
     if (!doc) return null;
 
-    // Strip Convex system fields — only return playback metadata
-    const { _id: _, _creationTime: __, ...playback } = doc;
-    return playback;
+    return {
+      isPlaying: doc.isPlaying,
+      trackName: doc.trackName,
+      artistName: doc.artistName,
+      albumName: doc.albumName,
+      albumArt: doc.albumArt,
+      trackUrl: doc.trackUrl ?? null,
+      trackId: doc.trackId,
+      progressMs: doc.progressMs,
+      durationMs: doc.durationMs,
+      fetchedAt: doc.fetchedAt,
+    };
   },
 });
 
@@ -89,7 +116,8 @@ export const updateNowPlaying = internalMutation({
     artistName: v.string(),
     albumName: v.string(),
     albumArt: v.string(),
-    trackUrl: v.string(),
+    trackUrl: v.optional(v.union(v.string(), v.null())),
+    trackId: v.optional(v.string()),
     progressMs: v.number(),
     durationMs: v.number(),
     fetchedAt: v.number(),
@@ -111,6 +139,13 @@ export const clearNowPlaying = internalMutation({
     if (existing) {
       await ctx.db.delete(existing._id);
     }
+  },
+});
+
+export const getNowPlayingSnapshot = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("spotifyNowPlaying").first();
   },
 });
 
@@ -152,11 +187,56 @@ async function refreshAccessToken(
   };
 }
 
+function normalizeNowPlaying(data: SpotifyCurrentlyPlaying): NowPlayingSnapshot | null {
+  if (!data.item || data.currently_playing_type !== "track") {
+    return null;
+  }
+
+  const track = data.item;
+  const durationMs = Math.max(0, track.duration_ms ?? 0);
+  const progressRaw = data.progress_ms ?? 0;
+  const progressMs = Math.min(Math.max(0, progressRaw), durationMs);
+  const trackUrl = track.external_urls?.spotify ?? track.album.external_urls?.spotify ?? null;
+
+  return {
+    isPlaying: data.is_playing,
+    trackName: track.name,
+    artistName: track.artists.map((a) => a.name).join(", "),
+    albumName: track.album.name,
+    albumArt: track.album.images[0]?.url ?? "",
+    trackUrl,
+    trackId: toOptionalString(track.id),
+    progressMs,
+    durationMs,
+    fetchedAt: Date.now(),
+  };
+}
+
 // ============ Cron: Poll Spotify API ============
 
 export const pollNowPlaying = internalAction({
   args: {},
   handler: async (ctx) => {
+    const markCurrentTrackAsNotPlaying = async () => {
+      const existing = await ctx.runQuery(internal.spotify.getNowPlayingSnapshot);
+      if (!existing || !existing.isPlaying) {
+        return;
+      }
+
+      await ctx.runMutation(internal.spotify.updateNowPlaying, {
+        isPlaying: false,
+        trackName: existing.trackName,
+        artistName: existing.artistName,
+        albumName: existing.albumName,
+        albumArt: existing.albumArt,
+        trackUrl: existing.trackUrl ?? null,
+        trackId: toOptionalString(existing.trackId),
+        progressMs: Math.min(existing.progressMs, existing.durationMs),
+        durationMs: existing.durationMs,
+        fetchedAt: Date.now(),
+      });
+    };
+
     let credentials = await ctx.runQuery(internal.spotify.getCredentials);
     if (!credentials) return;
 
@@ -176,33 +256,31 @@ export const pollNowPlaying = internalAction({
 
     // 204 = nothing playing
     if (response.status === 204) {
-      await ctx.runMutation(internal.spotify.clearNowPlaying);
+      await markCurrentTrackAsNotPlaying();
       return;
     }
 
     if (!response.ok) {
-      console.error("Spotify API error:", response.status);
+      if (response.status === 401 || response.status === 403) {
+        console.error("Spotify API authorization error:", response.status);
+      } else if (response.status === 429) {
+        console.error("Spotify API rate limit reached");
+      } else if (response.status >= 500) {
+        console.error("Spotify API server error:", response.status);
+      } else {
+        console.error("Spotify API error:", response.status);
+      }
       return;
     }
 
-    const data: SpotifyCurrentlyPlaying = await response.json();
+    const data = (await response.json()) as SpotifyCurrentlyPlaying;
+    const normalized = normalizeNowPlaying(data);
 
-    if (!data.item || data.currently_playing_type !== "track") {
-      await ctx.runMutation(internal.spotify.clearNowPlaying);
+    if (!normalized) {
+      await markCurrentTrackAsNotPlaying();
       return;
     }
 
-    const track = data.item;
-    await ctx.runMutation(internal.spotify.updateNowPlaying, {
-      isPlaying: data.is_playing,
-      trackName: track.name,
-      artistName: track.artists.map((a) => a.name).join(", "),
-      albumName: track.album.name,
-      albumArt: track.album.images[0]?.url ?? "",
-      trackUrl: track.external_urls.spotify,
-      progressMs: data.progress_ms,
-      durationMs: track.duration_ms,
-      fetchedAt: Date.now(),
-    });
+    await ctx.runMutation(internal.spotify.updateNowPlaying, normalized);
   },
 });
