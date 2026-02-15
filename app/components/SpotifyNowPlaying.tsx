@@ -87,7 +87,7 @@ export default function SpotifyNowPlaying() {
         return (
             <button
                 onClick={() => setHidden(false)}
-                className="fixed bottom-6 right-6 z-50 px-5 py-2.5 bg-white border border-gray-200 rounded-full shadow-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all active:scale-95 flex items-center gap-2"
+                className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 px-5 py-2.5 bg-white border border-gray-200 rounded-full shadow-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all active:scale-95 flex items-center gap-2"
             >
                 <div className="w-2 h-2 rounded-full bg-[#1DB954] animate-pulse" />
                 Show Player
@@ -102,20 +102,20 @@ export default function SpotifyNowPlaying() {
         : 0;
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 group">
-            <div className="relative w-[320px] bg-white border border-gray-100 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] p-4 transition-all duration-300">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 left-4 sm:left-auto z-50 group">
+            <div className="relative w-full sm:w-[320px] bg-white border border-gray-100 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] p-3 sm:p-4 transition-all duration-300">
 
-                {/* Close Button */}
+                {/* Close Button — always visible on touch, hover-reveal on desktop */}
                 <button
                     onClick={() => setHidden(true)}
-                    className="absolute top-2 right-2 p-1 rounded-full text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-gray-500"
+                    className="absolute top-2 right-2 p-1.5 rounded-full text-gray-400 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:text-gray-500 active:scale-90"
                 >
                     <X size={14} />
                 </button>
 
-                <div className="flex items-center gap-4">
-                    {/* Artwork - No blur, no animation if image exists */}
-                    <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 shadow-sm bg-gray-50 border border-black/5">
+                <div className="flex items-center gap-3 sm:gap-4">
+                    {/* Artwork */}
+                    <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden shrink-0 shadow-sm bg-gray-50 border border-black/5">
                         {safeData?.albumArt ? (
                             <Image
                                 src={safeData.albumArt}
