@@ -1,90 +1,58 @@
-# Welcome to your Convex functions directory!
+# Convex Backend Notes
 
-Write your Convex functions here.
-See https://docs.convex.dev/functions for more.
+This directory contains Spotify-related backend logic for the personal site.
 
-A query function that takes two arguments looks like:
+## Files
 
-```ts
-// convex/myFunctions.ts
-import { query } from "./_generated/server";
-import { v } from "convex/values";
+- `schema.ts`: table schemas and validators.
+- `spotify.ts`: public query + internal credential/token/cache logic + Spotify polling action.
+- `crons.ts`: schedules Spotify polling.
 
-export const myQueryFunction = query({
-  // Validators for arguments.
-  args: {
-    first: v.number(),
-    second: v.string(),
-  },
+## Tables
 
-  // Function implementation.
-  handler: async (ctx, args) => {
-    // Read the database as many times as you need here.
-    // See https://docs.convex.dev/database/reading-data.
-    const documents = await ctx.db.query("tablename").collect();
+### `spotifyCredentials`
 
-    // Arguments passed from the client are properties of the args object.
-    console.log(args.first, args.second);
+- `accessToken: string`
+- `refreshToken: string`
+- `expiresAt: number`
 
-    // Write arbitrary JavaScript here: filter, aggregate, build derived data,
-    // remove non-public properties, or create new objects.
-    return documents;
-  },
-});
+Only internal functions read/write this table.
+
+### `spotifyNowPlaying`
+
+- `isPlaying: boolean`
+- `trackName: string`
+- `artistName: string`
+- `albumName: string`
+- `albumArt: string`
+- `trackUrl?: string | null`
+- `trackId?: string`
+- `progressMs: number`
+- `durationMs: number`
+- `fetchedAt: number`
+
+This table stores one canonical snapshot consumed by the frontend query.
+
+## Data Flow
+
+1. Cron runs every 15 seconds: `internal.spotify.pollNowPlaying`.
+2. Poll action refreshes token if near expiry.
+3. Poll action calls Spotify currently-playing endpoint.
+4. Response is normalized and upserted into `spotifyNowPlaying`.
+5. Inactive/non-track states preserve last track metadata and set `isPlaying: false`.
+6. Public `currentlyPlaying` query returns playback metadata to the client.
+
+## Validation/Resilience Rules
+
+- `trackUrl` is optional/nullable to prevent runtime validation crashes when Spotify omits URL fields.
+- Progress is clamped to `[0, durationMs]`.
+- API failures (`401/403`, `429`, `5xx`) do not delete cached playback data.
+- `204` responses do not clear the document; they mark playback inactive to enable last-played fallback.
+
+## Commands
+
+Run Convex functions locally with the project root scripts/workflow you already use, and verify with:
+
+```bash
+npm run lint
 ```
-
-Using this query function in a React component looks like:
-
-```ts
-const data = useQuery(api.myFunctions.myQueryFunction, {
-  first: 10,
-  second: "hello",
-});
-```
-
-A mutation function looks like:
-
-```ts
-// convex/myFunctions.ts
-import { mutation } from "./_generated/server";
-import { v } from "convex/values";
-
-export const myMutationFunction = mutation({
-  // Validators for arguments.
-  args: {
-    first: v.string(),
-    second: v.string(),
-  },
-
-  // Function implementation.
-  handler: async (ctx, args) => {
-    // Insert or modify documents in the database here.
-    // Mutations can also read from the database like queries.
-    // See https://docs.convex.dev/database/writing-data.
-    const message = { body: args.first, author: args.second };
-    const id = await ctx.db.insert("messages", message);
-
-    // Optionally, return a value from your mutation.
-    return await ctx.db.get("messages", id);
-  },
-});
-```
-
-Using this mutation function in a React component looks like:
-
-```ts
-const mutation = useMutation(api.myFunctions.myMutationFunction);
-function handleButtonPress() {
-  // fire and forget, the most common way to use mutations
-  mutation({ first: "Hello!", second: "me" });
-  // OR
-  // use the result once the mutation has completed
-  mutation({ first: "Hello!", second: "me" }).then((result) =>
-    console.log(result),
-  );
-}
-```
-
-Use the Convex CLI to push your functions to a deployment. See everything
-the Convex CLI can do by running `npx convex -h` in your project root
-directory. To learn more, launch the docs with `npx convex docs`.

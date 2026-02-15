@@ -61,8 +61,11 @@ function getParticleColor(hue: number, speed: number): string {
 
 // ============ Constants ============
 
-const PARTICLE_COUNT = 1500;
-const CHAOS_PARTICLE_COUNT = 20;
+const DESKTOP_PARTICLE_COUNT = 1500;
+const TABLET_PARTICLE_COUNT = 900;
+const MOBILE_PARTICLE_COUNT = 420;
+const DESKTOP_CHAOS_PARTICLE_COUNT = 20;
+const MOBILE_CHAOS_PARTICLE_COUNT = 10;
 const SCALE = 25;
 const LORENZ_SIGMA = 10;
 const LORENZ_RHO = 28;
@@ -70,7 +73,6 @@ const LORENZ_BETA = 8 / 3;
 const LORENZ_DT = 0.005;
 const LORENZ_SUBSTEPS = 3;
 const LORENZ_TRAIL_LEN = 15;
-const LORENZ_SCALE = 20;
 const PULSE_DURATION_MS = 2000;
 const PULSE_SPEED_BOOST = 1.8;
 
@@ -85,6 +87,12 @@ interface ChaosParticle {
     history: { x: number; y: number; z: number }[];
 }
 
+interface RendererProfile {
+    particleCount: number;
+    chaosParticleCount: number;
+    lorenzScale: number;
+}
+
 function createFlowParticle(w: number, h: number): FlowParticle {
     return { x: Math.random() * w, y: Math.random() * h, vx: 0, vy: 0, baseSpeed: 1 + Math.random() };
 }
@@ -96,6 +104,34 @@ function createChaosParticle(): ChaosParticle {
         z: 5 + Math.random() * 40,
         hueOffset: Math.random() * 60 - 30,
         history: [],
+    };
+}
+
+function getRendererProfile(width: number, height: number): RendererProfile {
+    const isMobile = width <= 768;
+    const isTablet = width > 768 && width <= 1100;
+    const shortest = Math.min(width, height);
+
+    if (isMobile) {
+        return {
+            particleCount: MOBILE_PARTICLE_COUNT,
+            chaosParticleCount: MOBILE_CHAOS_PARTICLE_COUNT,
+            lorenzScale: Math.max(8, Math.min(12, shortest / 42)),
+        };
+    }
+
+    if (isTablet) {
+        return {
+            particleCount: TABLET_PARTICLE_COUNT,
+            chaosParticleCount: 14,
+            lorenzScale: Math.max(10, Math.min(16, shortest / 40)),
+        };
+    }
+
+    return {
+        particleCount: DESKTOP_PARTICLE_COUNT,
+        chaosParticleCount: DESKTOP_CHAOS_PARTICLE_COUNT,
+        lorenzScale: Math.max(12, Math.min(20, shortest / 38)),
     };
 }
 
@@ -166,7 +202,7 @@ function updateChaosParticle(p: ChaosParticle): void {
 
 function drawChaosParticle(
     ctx: CanvasRenderingContext2D, p: ChaosParticle,
-    cosR: number, sinR: number, cx: number, cy: number, baseHue: number,
+    cosR: number, sinR: number, cx: number, cy: number, baseHue: number, lorenzScale: number,
 ): void {
     const hue = (baseHue + p.hueOffset + 360) % 360;
     const len = p.history.length;
@@ -180,8 +216,8 @@ function drawChaosParticle(
         const pt = p.history[i];
         const rx = pt.x * cosR - pt.z * sinR;
         const rz = pt.x * sinR + pt.z * cosR;
-        const px = cx + rx * LORENZ_SCALE;
-        const py = cy - pt.y * LORENZ_SCALE + rz * 0.3;
+        const px = cx + rx * lorenzScale;
+        const py = cy - pt.y * lorenzScale + rz * 0.3;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
     }
@@ -189,8 +225,8 @@ function drawChaosParticle(
 
     // Bright head dot
     const head = p.history[len - 1];
-    const hx = cx + (head.x * cosR - head.z * sinR) * LORENZ_SCALE;
-    const hy = cy - head.y * LORENZ_SCALE + (head.x * sinR + head.z * cosR) * 0.3;
+    const hx = cx + (head.x * cosR - head.z * sinR) * lorenzScale;
+    const hy = cy - head.y * lorenzScale + (head.x * sinR + head.z * cosR) * 0.3;
 
     ctx.beginPath();
     ctx.arc(hx, hy, 2.5, 0, Math.PI * 2);
@@ -221,6 +257,7 @@ export default function InteractiveBackground() {
         flowField: [] as number[],
         zOffset: 0,
         dimensions: { width: 0, height: 0, cols: 0, rows: 0 },
+        profile: getRendererProfile(1440, 900),
         chaosInitialized: false,
         lastTrackName: "",
         pulseUntil: 0,
@@ -248,11 +285,15 @@ export default function InteractiveBackground() {
             const h = window.innerHeight;
             canvas.width = w;
             canvas.height = h;
+            state.profile = getRendererProfile(w, h);
             const cols = Math.floor(w / SCALE) + 1;
             const rows = Math.floor(h / SCALE) + 1;
             state.dimensions = { width: w, height: h, cols, rows };
             state.flowField = new Array(cols * rows);
-            state.particles = Array.from({ length: PARTICLE_COUNT }, () => createFlowParticle(w, h));
+            state.particles = Array.from(
+                { length: state.profile.particleCount },
+                () => createFlowParticle(w, h),
+            );
         };
 
         const onMouseMove = (e: MouseEvent) => {
@@ -272,11 +313,12 @@ export default function InteractiveBackground() {
     useEffect(() => {
         const state = stateRef.current;
         if (mode === "lorenz" && !state.chaosInitialized) {
-            state.chaosParticles = [];
+            const { chaosParticleCount } = state.profile;
+            state.chaosParticles = Array.from(
+                { length: chaosParticleCount },
+                () => createChaosParticle(),
+            );
             state.chaosInitialized = true;
-            for (let i = 0; i < CHAOS_PARTICLE_COUNT; i++) {
-                setTimeout(() => state.chaosParticles.push(createChaosParticle()), i * 50);
-            }
         } else if (mode !== "lorenz") {
             state.chaosInitialized = false;
         }
@@ -300,6 +342,7 @@ export default function InteractiveBackground() {
 
         const animate = (timestamp: number) => {
             const { width, height, cols, rows } = state.dimensions;
+            const { lorenzScale, chaosParticleCount } = state.profile;
             const track = nowPlayingRef.current;
             const config = getPageConfig(pathnameRef.current);
 
@@ -324,10 +367,10 @@ export default function InteractiveBackground() {
 
                 for (const p of state.chaosParticles) {
                     updateChaosParticle(p);
-                    drawChaosParticle(ctx, p, cosR, sinR, cx, cy, hue);
+                    drawChaosParticle(ctx, p, cosR, sinR, cx, cy, hue, lorenzScale);
                 }
 
-                if (Math.random() > 0.97 && state.chaosParticles.length < 35) {
+                if (Math.random() > 0.98 && state.chaosParticles.length < chaosParticleCount + 6) {
                     state.chaosParticles.push(createChaosParticle());
                 }
             } else {

@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Personal Website
 
-## Getting Started
+Personal site built with Next.js App Router and Convex-backed Spotify integration.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 + React 19
+- Tailwind CSS v4 + global CSS
+- Convex (cron polling + cached now-playing state)
+
+## Key App Areas
+
+- `app/layout.tsx`: root providers and global UI layers.
+- `app/components/InteractiveBackground.tsx`: boids and Lorenz background renderer.
+- `app/components/SpotifyNowPlaying.tsx`: hideable Spotify card with live progress.
+- `app/context/SimulationContext.tsx`: simulation mode persistence and shared state.
+- `convex/spotify.ts`: token refresh, Spotify polling, normalization, and cache updates.
+- `convex/schema.ts`: Convex table schemas.
+
+## Spotify Behavior
+
+- Polls Spotify currently-playing every 15 seconds from Convex cron.
+- Stores a normalized snapshot in `spotifyNowPlaying`.
+- Keeps the last known track when playback is inactive and marks `isPlaying: false`.
+- Handles missing URLs/nullable IDs safely to avoid runtime validation errors.
+
+## Mobile and UI Notes
+
+- Spotify card is hideable and restored with a compact button.
+- Main content reserves bottom space so the card does not block content.
+- Background renderer adapts particle counts and Lorenz scale by viewport size.
+
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Lint:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+```

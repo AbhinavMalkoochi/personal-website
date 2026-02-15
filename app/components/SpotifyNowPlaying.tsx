@@ -156,22 +156,7 @@ export default function SpotifyNowPlaying() {
 
     const body = (
         <>
-            <div className="shrink-0 self-start">
-                <button
-                    type="button"
-                    className="inline-flex items-center justify-center w-7 h-7 rounded-full text-gray-500 hover:text-gray-700 hover:bg-black/5"
-                    onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setHidden(true);
-                    }}
-                    aria-label="Hide Spotify widget"
-                >
-                    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M18 6 6 18M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
+
 
             <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-md bg-linear-to-br from-gray-100 to-gray-200">
                 {safeData.albumArt && (
@@ -186,7 +171,6 @@ export default function SpotifyNowPlaying() {
                 )}
                 {showAsPlaying && <SoundBars />}
             </div>
-
             <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -225,6 +209,7 @@ export default function SpotifyNowPlaying() {
                             className="absolute top-1/2 w-2.5 h-2.5 bg-white rounded-full shadow-md border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
                             style={{ left: `calc(${initialPercent}% - 5px)`, transform: "translateY(-50%)" }}
                         />
+
                     </div>
 
                     <span className="text-xs font-semibold text-gray-500 min-w-[28px] tabular-nums text-right">
@@ -235,6 +220,22 @@ export default function SpotifyNowPlaying() {
                 <p className="text-[11px] font-semibold text-gray-500">
                     {showAsPlaying ? "Now playing" : "Last played"}
                 </p>
+            </div>
+            <div className="shrink-0 self-start">
+                <button
+                    type="button"
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-full text-gray-500 hover:text-gray-700 hover:bg-black/5"
+                    onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setHidden(true);
+                    }}
+                    aria-label="Hide Spotify widget"
+                >
+                    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
         </>
     );
