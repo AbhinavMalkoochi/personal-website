@@ -82,13 +82,13 @@ export default function HomeClient({ projects }: Props) {
                         >
                             <Link
                                 href={`/projects/${project.slug}`}
-                                className="grow py-4 sm:py-5 pr-2 sm:pr-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5 sm:gap-4 cursor-pointer"
+                                className="grow py-4 sm:py-5 pr-2 sm:pr-8 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 cursor-pointer"
                             >
-                                <div className="flex flex-col gap-0.5 min-w-0">
+                                <div className="flex flex-col gap-0.5 min-w-0 sm:flex-1">
                                     <span className="text-base font-medium text-foreground">{project.name}</span>
                                     <span className="text-sm text-muted truncate">{project.summary}</span>
                                 </div>
-                                <div className="flex gap-1.5 sm:gap-2 shrink-0 flex-wrap">
+                                <div className="flex gap-1.5 sm:gap-2 shrink-0 sm:w-40 sm:justify-end flex-wrap">
                                     {project.tech.map((t) => (
                                         <span key={t} className="tag">{t}</span>
                                     ))}
