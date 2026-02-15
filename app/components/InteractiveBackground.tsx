@@ -63,7 +63,7 @@ function getParticleColor(hue: number, speed: number): string {
 
 const DESKTOP_PARTICLE_COUNT = 1500;
 const TABLET_PARTICLE_COUNT = 900;
-const MOBILE_PARTICLE_COUNT = 420;
+const MOBILE_PARTICLE_COUNT = 200;
 const DESKTOP_CHAOS_PARTICLE_COUNT = 20;
 const MOBILE_CHAOS_PARTICLE_COUNT = 10;
 const SCALE = 25;
@@ -72,7 +72,7 @@ const LORENZ_RHO = 28;
 const LORENZ_BETA = 8 / 3;
 const LORENZ_DT = 0.005;
 const LORENZ_SUBSTEPS = 3;
-const LORENZ_TRAIL_LEN = 15;
+const LORENZ_TRAIL_LEN = 20;
 const PULSE_DURATION_MS = 2000;
 const PULSE_SPEED_BOOST = 1.8;
 
@@ -116,7 +116,7 @@ function getRendererProfile(width: number, height: number): RendererProfile {
         return {
             particleCount: MOBILE_PARTICLE_COUNT,
             chaosParticleCount: MOBILE_CHAOS_PARTICLE_COUNT,
-            lorenzScale: Math.max(8, Math.min(12, shortest / 42)),
+            lorenzScale: Math.max(10, Math.min(16, shortest / 28)),
         };
     }
 
@@ -124,14 +124,14 @@ function getRendererProfile(width: number, height: number): RendererProfile {
         return {
             particleCount: TABLET_PARTICLE_COUNT,
             chaosParticleCount: 14,
-            lorenzScale: Math.max(10, Math.min(16, shortest / 40)),
+            lorenzScale: Math.max(12, Math.min(18, shortest / 34)),
         };
     }
 
     return {
         particleCount: DESKTOP_PARTICLE_COUNT,
         chaosParticleCount: DESKTOP_CHAOS_PARTICLE_COUNT,
-        lorenzScale: Math.max(12, Math.min(20, shortest / 38)),
+        lorenzScale: Math.max(14, Math.min(22, shortest / 34)),
     };
 }
 
@@ -209,8 +209,8 @@ function drawChaosParticle(
     if (len < 2) return;
 
     ctx.beginPath();
-    ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.6)`;
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = `hsla(${hue}, 85%, 65%, 0.7)`;
+    ctx.lineWidth = 2;
 
     for (let i = 0; i < len; i++) {
         const pt = p.history[i];
@@ -229,8 +229,8 @@ function drawChaosParticle(
     const hy = cy - head.y * lorenzScale + (head.x * sinR + head.z * cosR) * 0.3;
 
     ctx.beginPath();
-    ctx.arc(hx, hy, 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(${hue}, 90%, 80%, 0.9)`;
+    ctx.arc(hx, hy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${hue}, 95%, 85%, 0.95)`;
     ctx.fill();
 }
 
