@@ -35,8 +35,8 @@ export default async function ProjectPage({ params }: Props) {
             </Link>
 
             <div className="max-w-2xl">
-                <div className="flex justify-between items-start mb-6">
-                    <h1 className="header-name text-4xl">{meta.name}</h1>
+                <div className="flex justify-between items-start mb-6 gap-4">
+                    <h1 className="header-name text-2xl sm:text-4xl">{meta.name}</h1>
                     <a
                         href={meta.githubUrl}
                         target="_blank"
