@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import InteractiveBackground from "./components/InteractiveBackground";
-import ModeToggle from "./components/ModeToggle";
 import SpotifyNowPlaying from "./components/SpotifyNowPlaying";
-import SimulationShell from "./components/SimulationShell";
-import { SimulationProvider } from "./context/SimulationContext";
 import { ConvexClientProvider } from "./providers/ConvexClientProvider";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -29,16 +25,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${jetbrainsMono.variable} antialiased`}>
         <ConvexClientProvider>
-          <SimulationProvider>
-            <SimulationShell>
-              <InteractiveBackground />
-              <ModeToggle />
-              <SpotifyNowPlaying />
-              <main className="main-content">
-                {children}
-              </main>
-            </SimulationShell>
-          </SimulationProvider>
+          <SpotifyNowPlaying />
+          <main className="main-content">
+            {children}
+          </main>
         </ConvexClientProvider>
         <Analytics />
       </body>

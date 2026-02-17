@@ -11,9 +11,7 @@ Personal site built with Next.js App Router and Convex-backed Spotify integratio
 ## Key App Areas
 
 - `app/layout.tsx`: root providers and global UI layers.
-- `app/components/InteractiveBackground.tsx`: boids and Lorenz background renderer.
 - `app/components/SpotifyNowPlaying.tsx`: hideable Spotify card with live progress.
-- `app/context/SimulationContext.tsx`: simulation mode persistence and shared state.
 - `convex/spotify.ts`: token refresh, Spotify polling, normalization, and cache updates.
 - `convex/schema.ts`: Convex table schemas.
 
@@ -28,7 +26,6 @@ Personal site built with Next.js App Router and Convex-backed Spotify integratio
 
 - Spotify card is hideable and restored with a compact button.
 - Main content reserves bottom space so the card does not block content.
-- Background renderer adapts particle counts and Lorenz scale by viewport size.
 
 ## Local Development
 
@@ -42,3 +39,4 @@ Lint:
 ```bash
 npm run lint
 ```
+
