@@ -19,6 +19,7 @@ const IDLE_STALE_MS = 120_000;
 const PROGRESS_CORRECTION_MS = 90_000;
 const SERVER_ERROR_BACKOFF_MS = 30_000;
 const RATE_LIMIT_BACKOFF_MS = 60_000;
+const MAX_BACKOFF_MS = 5 * 60 * 1000;
 const VIEWER_PRESENCE_TTL_MS = 120_000;
 const NO_VIEWER_PLAYING_REFRESH_MS = 10 * 60 * 1000;
 const NO_VIEWER_IDLE_REFRESH_MS = 30 * 60 * 1000;
@@ -84,6 +85,10 @@ function parseRetryAfterMs(retryAfter: string | null): number | null {
   }
 
   return null;
+}
+
+function clampBackoffMs(valueMs: number): number {
+  return Math.min(Math.max(0, valueMs), MAX_BACKOFF_MS);
 }
 
 // ============ Public Query (client subscribes to this) ============
@@ -195,9 +200,10 @@ export const releasePollLock = internalMutation({
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.query("spotifyPollState").first();
+    const effectiveBackoffMs = clampBackoffMs(args.backoffMs ?? 0);
     const nextAllowedPollAt = args.success
       ? 0
-      : Math.max(existing?.nextAllowedPollAt ?? 0, args.now + (args.backoffMs ?? 0));
+      : Math.max(existing?.nextAllowedPollAt ?? 0, args.now + effectiveBackoffMs);
 
     const payload = {
       lockUntil: 0,
@@ -271,16 +277,6 @@ export const updateNowPlaying = internalMutation({
     }
 
     await ctx.db.patch(existing._id, args);
-  },
-});
-
-export const clearNowPlaying = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const existing = await ctx.db.query("spotifyNowPlaying").first();
-    if (existing) {
-      await ctx.db.delete(existing._id);
-    }
   },
 });
 
@@ -462,10 +458,10 @@ export const pollNowPlaying = internalAction({
           console.error("Spotify API authorization error:", response.status);
         } else if (response.status === 429) {
           const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
-          backoffMs = retryAfterMs ?? RATE_LIMIT_BACKOFF_MS;
+          backoffMs = clampBackoffMs(retryAfterMs ?? RATE_LIMIT_BACKOFF_MS);
           console.error("Spotify API rate limit reached");
         } else if (response.status >= 500) {
-          backoffMs = SERVER_ERROR_BACKOFF_MS;
+          backoffMs = clampBackoffMs(SERVER_ERROR_BACKOFF_MS);
           console.error("Spotify API server error:", response.status);
         } else {
           console.error("Spotify API error:", response.status);

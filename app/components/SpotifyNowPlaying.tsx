@@ -2,7 +2,7 @@
 
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useRef, useSyncExternalStore, useMemo } from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { X, Music } from "lucide-react";
 
@@ -17,6 +17,8 @@ function formatTime(ms: number): string {
 const STORAGE_KEY = "spotify-widget-hidden";
 const VISIBILITY_EVENT = "spotify-widget-visibility";
 const VIEWER_SESSION_STORAGE_KEY = "spotify-viewer-session-id";
+const PLAYING_STALE_MS = 15_000;
+const IDLE_STALE_MS = 120_000;
 
 function subscribeVisibility(onStoreChange: () => void) {
     window.addEventListener("storage", onStoreChange);
@@ -69,7 +71,6 @@ export default function SpotifyNowPlaying() {
     const viewerSessionRef = useRef<string | null>(null);
     const refreshInFlightRef = useRef(false);
     const lastRefreshAttemptRef = useRef(0);
-    const snapshotRef = useRef(safeData);
     const isHidden = useSyncExternalStore(subscribeVisibility, getHiddenSnapshot, () => false);
     const safeData = useMemo(() => {
         if (!data) return null;
@@ -81,11 +82,8 @@ export default function SpotifyNowPlaying() {
             fetchedAt: Math.max(0, data.fetchedAt),
         };
     }, [data]);
-    const isPlaying = Boolean(safeData?.isPlaying);
 
-    useEffect(() => {
-        snapshotRef.current = safeData;
-    }, [safeData]);
+    const isPlaying = Boolean(safeData?.isPlaying);
 
     useEffect(() => {
         if (!viewerSessionRef.current) {
@@ -107,10 +105,9 @@ export default function SpotifyNowPlaying() {
             if (refreshInFlightRef.current) return;
             if (!force && now - lastRefreshAttemptRef.current < 5000) return;
 
-            const snapshot = snapshotRef.current;
-            if (!force && snapshot) {
-                const staleAfterMs = snapshot.isPlaying ? 15_000 : 120_000;
-                if (now - snapshot.fetchedAt < staleAfterMs) {
+            if (!force && safeData) {
+                const staleAfterMs = safeData.isPlaying ? PLAYING_STALE_MS : IDLE_STALE_MS;
+                if (now - safeData.fetchedAt < staleAfterMs) {
                     return;
                 }
             }
@@ -155,15 +152,18 @@ export default function SpotifyNowPlaying() {
             window.clearInterval(intervalId);
             window.clearInterval(presenceIntervalId);
         };
-    }, [ensureFreshNowPlaying, isPlaying, reportViewerPresence]);
+    }, [ensureFreshNowPlaying, isPlaying, reportViewerPresence, safeData]);
 
     useEffect(() => {
         if (!isPlaying || !safeData) return;
         let rafId: number;
+        const startedAtClientMs = Date.now();
+        const baseProgressMs = safeData.progressMs;
 
         const tick = () => {
-            const elapsed = Math.max(0, Date.now() - safeData.fetchedAt);
-            const current = Math.min(safeData.progressMs + elapsed, safeData.durationMs);
+            // Use client-local elapsed time to avoid any server/browser clock skew artifacts.
+            const elapsed = Math.max(0, Date.now() - startedAtClientMs);
+            const current = Math.min(baseProgressMs + elapsed, safeData.durationMs);
             const percent = safeData.durationMs > 0 ? (current / safeData.durationMs) * 100 : 0;
 
             if (timeRef.current) timeRef.current.textContent = formatTime(current);
