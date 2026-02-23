@@ -17,10 +17,14 @@ Personal site built with Next.js App Router and Convex-backed Spotify integratio
 
 ## Spotify Behavior
 
-- Polls Spotify currently-playing every 15 seconds from Convex cron.
+- Uses a hybrid refresh model:
+	- 5-minute safety cron on Convex.
+	- On-demand freshness checks from visible client tabs.
+- Uses viewer heartbeats to avoid aggressive polling when nobody is on the site.
 - Stores a normalized snapshot in `spotifyNowPlaying`.
 - Keeps the last known track when playback is inactive and marks `isPlaying: false`.
 - Handles missing URLs/nullable IDs safely to avoid runtime validation errors.
+- Applies lock+backoff and write suppression to reduce function/mutation churn.
 
 ## Mobile and UI Notes
 

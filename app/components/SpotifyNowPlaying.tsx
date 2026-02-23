@@ -1,6 +1,6 @@
 "use client";
 
-import { useAction, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useRef, useSyncExternalStore, useMemo } from "react";
 import Image from "next/image";
@@ -16,6 +16,7 @@ function formatTime(ms: number): string {
 
 const STORAGE_KEY = "spotify-widget-hidden";
 const VISIBILITY_EVENT = "spotify-widget-visibility";
+const VIEWER_SESSION_STORAGE_KEY = "spotify-viewer-session-id";
 
 function subscribeVisibility(onStoreChange: () => void) {
     window.addEventListener("storage", onStoreChange);
@@ -32,6 +33,18 @@ const setHidden = (nextHidden: boolean) => {
     localStorage.setItem(STORAGE_KEY, nextHidden ? "1" : "0");
     window.dispatchEvent(new Event(VISIBILITY_EVENT));
 };
+
+function getOrCreateViewerSessionId(): string {
+    const existing = localStorage.getItem(VIEWER_SESSION_STORAGE_KEY);
+    if (existing) return existing;
+
+    const nextId = typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    localStorage.setItem(VIEWER_SESSION_STORAGE_KEY, nextId);
+    return nextId;
+}
 
 // --- Sub-components ---
 function SoundBars() {
@@ -50,8 +63,13 @@ function SoundBars() {
 export default function SpotifyNowPlaying() {
     const data = useQuery(api.spotify.currentlyPlaying);
     const ensureFreshNowPlaying = useAction(api.spotify.ensureFreshNowPlaying);
+    const reportViewerPresence = useMutation(api.spotify.reportViewerPresence);
     const timeRef = useRef<HTMLSpanElement>(null);
     const barRef = useRef<HTMLDivElement>(null);
+    const viewerSessionRef = useRef<string | null>(null);
+    const refreshInFlightRef = useRef(false);
+    const lastRefreshAttemptRef = useRef(0);
+    const snapshotRef = useRef(safeData);
     const isHidden = useSyncExternalStore(subscribeVisibility, getHiddenSnapshot, () => false);
     const safeData = useMemo(() => {
         if (!data) return null;
@@ -66,27 +84,68 @@ export default function SpotifyNowPlaying() {
     const isPlaying = Boolean(safeData?.isPlaying);
 
     useEffect(() => {
-        const refresh = () => {
+        snapshotRef.current = safeData;
+    }, [safeData]);
+
+    useEffect(() => {
+        if (!viewerSessionRef.current) {
+            viewerSessionRef.current = getOrCreateViewerSessionId();
+        }
+
+        const reportPresence = () => {
+            if (document.visibilityState !== "visible" || !viewerSessionRef.current) {
+                return;
+            }
+
+            void reportViewerPresence({ sessionId: viewerSessionRef.current }).catch(() => {
+                // Presence should be best-effort and never block rendering.
+            });
+        };
+
+        const refresh = (force: boolean) => {
+            const now = Date.now();
+            if (refreshInFlightRef.current) return;
+            if (!force && now - lastRefreshAttemptRef.current < 5000) return;
+
+            const snapshot = snapshotRef.current;
+            if (!force && snapshot) {
+                const staleAfterMs = snapshot.isPlaying ? 15_000 : 120_000;
+                if (now - snapshot.fetchedAt < staleAfterMs) {
+                    return;
+                }
+            }
+
+            lastRefreshAttemptRef.current = now;
+            refreshInFlightRef.current = true;
             void ensureFreshNowPlaying().catch(() => {
                 // Ignore transient action failures; the safety cron continues to backfill.
+            }).finally(() => {
+                refreshInFlightRef.current = false;
             });
         };
 
         const onVisible = () => {
             if (document.visibilityState === "visible") {
-                refresh();
+                reportPresence();
+                refresh(true);
             }
         };
 
         const intervalMs = isPlaying ? 20_000 : 90_000;
 
-        refresh();
+        reportPresence();
+        refresh(true);
+
+        const presenceIntervalId = window.setInterval(() => {
+            reportPresence();
+        }, 60_000);
+
         document.addEventListener("visibilitychange", onVisible);
         window.addEventListener("focus", onVisible);
 
         const intervalId = window.setInterval(() => {
             if (document.visibilityState === "visible") {
-                refresh();
+                refresh(false);
             }
         }, intervalMs);
 
@@ -94,8 +153,9 @@ export default function SpotifyNowPlaying() {
             document.removeEventListener("visibilitychange", onVisible);
             window.removeEventListener("focus", onVisible);
             window.clearInterval(intervalId);
+            window.clearInterval(presenceIntervalId);
         };
-    }, [ensureFreshNowPlaying, isPlaying]);
+    }, [ensureFreshNowPlaying, isPlaying, reportViewerPresence]);
 
     useEffect(() => {
         if (!isPlaying || !safeData) return;

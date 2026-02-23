@@ -8,7 +8,7 @@
  * - Client secrets live in Convex environment variables, never in client bundles
  */
 import { v } from "convex/values";
-import { action, internalAction, internalMutation, internalQuery, query } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 
@@ -19,6 +19,9 @@ const IDLE_STALE_MS = 120_000;
 const PROGRESS_CORRECTION_MS = 90_000;
 const SERVER_ERROR_BACKOFF_MS = 30_000;
 const RATE_LIMIT_BACKOFF_MS = 60_000;
+const VIEWER_PRESENCE_TTL_MS = 120_000;
+const NO_VIEWER_PLAYING_REFRESH_MS = 10 * 60 * 1000;
+const NO_VIEWER_IDLE_REFRESH_MS = 30 * 60 * 1000;
 
 // ============ Spotify API Types ============
 
@@ -106,6 +109,28 @@ export const currentlyPlaying = query({
   },
 });
 
+export const reportViewerPresence = mutation({
+  args: {
+    sessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("spotifyViewerPresence")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+
+    const now = Date.now();
+    if (existing) {
+      await ctx.db.patch(existing._id, { lastSeenAt: now });
+    } else {
+      await ctx.db.insert("spotifyViewerPresence", {
+        sessionId: args.sessionId,
+        lastSeenAt: now,
+      });
+    }
+  },
+});
+
 // ============ Internal: Credential Management ============
 
 export const getCredentials = internalQuery({
@@ -119,6 +144,17 @@ export const getPollState = internalQuery({
   args: {},
   handler: async (ctx): Promise<Doc<"spotifyPollState"> | null> => {
     return await ctx.db.query("spotifyPollState").first();
+  },
+});
+
+export const hasRecentViewerPresence = internalQuery({
+  args: {
+    now: v.number(),
+    ttlMs: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const viewers = await ctx.db.query("spotifyViewerPresence").collect();
+    return viewers.some((viewer) => args.now - viewer.lastSeenAt <= args.ttlMs);
   },
 });
 
@@ -347,6 +383,21 @@ export const pollNowPlaying = internalAction({
   args: {},
   handler: async (ctx) => {
     const startTime = Date.now();
+
+    const snapshot = await ctx.runQuery(internal.spotify.getNowPlayingSnapshot);
+    const hasRecentViewers = await ctx.runQuery(internal.spotify.hasRecentViewerPresence, {
+      now: startTime,
+      ttlMs: VIEWER_PRESENCE_TTL_MS,
+    });
+
+    if (!hasRecentViewers && snapshot) {
+      const ageMs = startTime - snapshot.fetchedAt;
+      const staleThreshold = snapshot.isPlaying ? NO_VIEWER_PLAYING_REFRESH_MS : NO_VIEWER_IDLE_REFRESH_MS;
+      if (ageMs < staleThreshold) {
+        return;
+      }
+    }
+
     const pollState = await ctx.runQuery(internal.spotify.getPollState);
     if (pollState && pollState.nextAllowedPollAt > startTime) {
       return;
