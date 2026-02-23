@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useRef, useSyncExternalStore, useMemo } from "react";
 import Image from "next/image";
@@ -49,6 +49,7 @@ function SoundBars() {
 // --- Main Component ---
 export default function SpotifyNowPlaying() {
     const data = useQuery(api.spotify.currentlyPlaying);
+    const ensureFreshNowPlaying = useAction(api.spotify.ensureFreshNowPlaying);
     const timeRef = useRef<HTMLSpanElement>(null);
     const barRef = useRef<HTMLDivElement>(null);
     const isHidden = useSyncExternalStore(subscribeVisibility, getHiddenSnapshot, () => false);
@@ -63,6 +64,38 @@ export default function SpotifyNowPlaying() {
         };
     }, [data]);
     const isPlaying = Boolean(safeData?.isPlaying);
+
+    useEffect(() => {
+        const refresh = () => {
+            void ensureFreshNowPlaying().catch(() => {
+                // Ignore transient action failures; the safety cron continues to backfill.
+            });
+        };
+
+        const onVisible = () => {
+            if (document.visibilityState === "visible") {
+                refresh();
+            }
+        };
+
+        const intervalMs = isPlaying ? 20_000 : 90_000;
+
+        refresh();
+        document.addEventListener("visibilitychange", onVisible);
+        window.addEventListener("focus", onVisible);
+
+        const intervalId = window.setInterval(() => {
+            if (document.visibilityState === "visible") {
+                refresh();
+            }
+        }, intervalMs);
+
+        return () => {
+            document.removeEventListener("visibilitychange", onVisible);
+            window.removeEventListener("focus", onVisible);
+            window.clearInterval(intervalId);
+        };
+    }, [ensureFreshNowPlaying, isPlaying]);
 
     useEffect(() => {
         if (!isPlaying || !safeData) return;
