@@ -8,9 +8,17 @@
  * - Client secrets live in Convex environment variables, never in client bundles
  */
 import { v } from "convex/values";
-import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
+
+const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const LOCK_TTL_MS = 10_000;
+const PLAYING_STALE_MS = 15_000;
+const IDLE_STALE_MS = 120_000;
+const PROGRESS_CORRECTION_MS = 90_000;
+const SERVER_ERROR_BACKOFF_MS = 30_000;
+const RATE_LIMIT_BACKOFF_MS = 60_000;
 
 // ============ Spotify API Types ============
 
@@ -59,6 +67,22 @@ function toOptionalString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+function parseRetryAfterMs(retryAfter: string | null): number | null {
+  if (!retryAfter) return null;
+
+  const asSeconds = Number(retryAfter);
+  if (Number.isFinite(asSeconds) && asSeconds >= 0) {
+    return Math.round(asSeconds * 1000);
+  }
+
+  const parsedDate = Date.parse(retryAfter);
+  if (!Number.isNaN(parsedDate)) {
+    return Math.max(0, parsedDate - Date.now());
+  }
+
+  return null;
+}
+
 // ============ Public Query (client subscribes to this) ============
 
 export const currentlyPlaying = query({
@@ -88,6 +112,69 @@ export const getCredentials = internalQuery({
   args: {},
   handler: async (ctx): Promise<Doc<"spotifyCredentials"> | null> => {
     return await ctx.db.query("spotifyCredentials").first();
+  },
+});
+
+export const getPollState = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<Doc<"spotifyPollState"> | null> => {
+    return await ctx.db.query("spotifyPollState").first();
+  },
+});
+
+export const tryAcquirePollLock = internalMutation({
+  args: {
+    now: v.number(),
+    lockTtlMs: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("spotifyPollState").first();
+
+    if (existing && existing.lockUntil > args.now) {
+      return false;
+    }
+
+    const payload = {
+      lockUntil: args.now + args.lockTtlMs,
+      nextAllowedPollAt: existing?.nextAllowedPollAt ?? 0,
+      lastAttemptAt: args.now,
+      lastSuccessAt: existing?.lastSuccessAt ?? 0,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, payload);
+    } else {
+      await ctx.db.insert("spotifyPollState", payload);
+    }
+
+    return true;
+  },
+});
+
+export const releasePollLock = internalMutation({
+  args: {
+    now: v.number(),
+    success: v.boolean(),
+    backoffMs: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("spotifyPollState").first();
+    const nextAllowedPollAt = args.success
+      ? 0
+      : Math.max(existing?.nextAllowedPollAt ?? 0, args.now + (args.backoffMs ?? 0));
+
+    const payload = {
+      lockUntil: 0,
+      nextAllowedPollAt,
+      lastAttemptAt: args.now,
+      lastSuccessAt: args.success ? args.now : existing?.lastSuccessAt ?? 0,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, payload);
+    } else {
+      await ctx.db.insert("spotifyPollState", payload);
+    }
   },
 });
 
@@ -124,11 +211,30 @@ export const updateNowPlaying = internalMutation({
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.query("spotifyNowPlaying").first();
-    if (existing) {
-      await ctx.db.patch(existing._id, args);
-    } else {
+    if (!existing) {
       await ctx.db.insert("spotifyNowPlaying", args);
+      return;
     }
+
+    const metadataChanged =
+      existing.trackName !== args.trackName ||
+      existing.artistName !== args.artistName ||
+      existing.albumName !== args.albumName ||
+      existing.albumArt !== args.albumArt ||
+      (existing.trackUrl ?? null) !== (args.trackUrl ?? null) ||
+      (existing.trackId ?? null) !== (args.trackId ?? null) ||
+      existing.durationMs !== args.durationMs;
+
+    const playbackStateChanged = existing.isPlaying !== args.isPlaying;
+    const progressDelta = Math.abs(existing.progressMs - args.progressMs);
+    const correctionDue = args.isPlaying && args.fetchedAt - existing.fetchedAt >= PROGRESS_CORRECTION_MS;
+    const seekLikely = args.isPlaying && progressDelta >= 5000;
+
+    if (!metadataChanged && !playbackStateChanged && !correctionDue && !seekLikely) {
+      return;
+    }
+
+    await ctx.db.patch(existing._id, args);
   },
 });
 
@@ -146,6 +252,29 @@ export const getNowPlayingSnapshot = internalQuery({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("spotifyNowPlaying").first();
+  },
+});
+
+export const ensureFreshNowPlaying = action({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const snapshot = await ctx.runQuery(internal.spotify.getNowPlayingSnapshot);
+
+    if (snapshot) {
+      const staleAfterMs = snapshot.isPlaying ? PLAYING_STALE_MS : IDLE_STALE_MS;
+      if (now - snapshot.fetchedAt < staleAfterMs) {
+        return { refreshed: false, reason: "fresh" as const };
+      }
+    }
+
+    const pollState = await ctx.runQuery(internal.spotify.getPollState);
+    if (pollState && pollState.nextAllowedPollAt > now) {
+      return { refreshed: false, reason: "backoff" as const };
+    }
+
+    await ctx.runAction(internal.spotify.pollNowPlaying);
+    return { refreshed: true, reason: "polled" as const };
   },
 });
 
@@ -217,6 +346,23 @@ function normalizeNowPlaying(data: SpotifyCurrentlyPlaying): NowPlayingSnapshot 
 export const pollNowPlaying = internalAction({
   args: {},
   handler: async (ctx) => {
+    const startTime = Date.now();
+    const pollState = await ctx.runQuery(internal.spotify.getPollState);
+    if (pollState && pollState.nextAllowedPollAt > startTime) {
+      return;
+    }
+
+    const lockAcquired = await ctx.runMutation(internal.spotify.tryAcquirePollLock, {
+      now: startTime,
+      lockTtlMs: LOCK_TTL_MS,
+    });
+    if (!lockAcquired) {
+      return;
+    }
+
+    let success = false;
+    let backoffMs = 0;
+
     const markCurrentTrackAsNotPlaying = async () => {
       const existing = await ctx.runQuery(internal.spotify.getNowPlayingSnapshot);
       if (!existing || !existing.isPlaying) {
@@ -237,50 +383,62 @@ export const pollNowPlaying = internalAction({
       });
     };
 
-    let credentials = await ctx.runQuery(internal.spotify.getCredentials);
-    if (!credentials) return;
+    try {
+      let credentials = await ctx.runQuery(internal.spotify.getCredentials);
+      if (!credentials) return;
 
-    // Refresh token if expiring within 5 minutes
-    const REFRESH_BUFFER_MS = 5 * 60 * 1000;
-    if (credentials.expiresAt < Date.now() + REFRESH_BUFFER_MS) {
-      const newTokens = await refreshAccessToken(credentials.refreshToken);
-      if (!newTokens) return;
-      await ctx.runMutation(internal.spotify.updateTokens, newTokens);
-      credentials = { ...credentials, ...newTokens };
-    }
-
-    const response = await fetch(
-      "https://api.spotify.com/v1/me/player/currently-playing",
-      { headers: { Authorization: `Bearer ${credentials.accessToken}` } },
-    );
-
-    // 204 = nothing playing
-    if (response.status === 204) {
-      await markCurrentTrackAsNotPlaying();
-      return;
-    }
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        console.error("Spotify API authorization error:", response.status);
-      } else if (response.status === 429) {
-        console.error("Spotify API rate limit reached");
-      } else if (response.status >= 500) {
-        console.error("Spotify API server error:", response.status);
-      } else {
-        console.error("Spotify API error:", response.status);
+      if (credentials.expiresAt < Date.now() + REFRESH_BUFFER_MS) {
+        const newTokens = await refreshAccessToken(credentials.refreshToken);
+        if (!newTokens) return;
+        await ctx.runMutation(internal.spotify.updateTokens, newTokens);
+        credentials = { ...credentials, ...newTokens };
       }
-      return;
+
+      const response = await fetch(
+        "https://api.spotify.com/v1/me/player/currently-playing",
+        { headers: { Authorization: `Bearer ${credentials.accessToken}` } },
+      );
+
+      // 204 = nothing playing
+      if (response.status === 204) {
+        await markCurrentTrackAsNotPlaying();
+        success = true;
+        return;
+      }
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          console.error("Spotify API authorization error:", response.status);
+        } else if (response.status === 429) {
+          const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+          backoffMs = retryAfterMs ?? RATE_LIMIT_BACKOFF_MS;
+          console.error("Spotify API rate limit reached");
+        } else if (response.status >= 500) {
+          backoffMs = SERVER_ERROR_BACKOFF_MS;
+          console.error("Spotify API server error:", response.status);
+        } else {
+          console.error("Spotify API error:", response.status);
+        }
+        return;
+      }
+
+      const data = (await response.json()) as SpotifyCurrentlyPlaying;
+      const normalized = normalizeNowPlaying(data);
+
+      if (!normalized) {
+        await markCurrentTrackAsNotPlaying();
+        success = true;
+        return;
+      }
+
+      await ctx.runMutation(internal.spotify.updateNowPlaying, normalized);
+      success = true;
+    } finally {
+      await ctx.runMutation(internal.spotify.releasePollLock, {
+        now: Date.now(),
+        success,
+        backoffMs,
+      });
     }
-
-    const data = (await response.json()) as SpotifyCurrentlyPlaying;
-    const normalized = normalizeNowPlaying(data);
-
-    if (!normalized) {
-      await markCurrentTrackAsNotPlaying();
-      return;
-    }
-
-    await ctx.runMutation(internal.spotify.updateNowPlaying, normalized);
   },
 });

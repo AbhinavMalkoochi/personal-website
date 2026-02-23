@@ -3,6 +3,6 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-crons.interval("poll-spotify", { seconds: 15 }, internal.spotify.pollNowPlaying);
+crons.interval("poll-spotify", { minutes: 5 }, internal.spotify.pollNowPlaying);
 
 export default crons;
