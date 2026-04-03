@@ -160,6 +160,10 @@ export const updateNowPlaying = internalMutation({
       return;
     }
 
+    // Reject stale writes — a slower concurrent refresh must not overwrite
+    // a newer one (prevents the "wrong song" race condition).
+    if (args.fetchedAt < existing.fetchedAt) return;
+
     const meaningfulChange =
       existing.trackId !== args.trackId ||
       existing.isPlaying !== args.isPlaying ||
@@ -168,11 +172,14 @@ export const updateNowPlaying = internalMutation({
       existing.albumName !== args.albumName ||
       existing.durationMs !== args.durationMs;
 
-    // Always write when playing (keeps progress in sync for subscribers).
-    // When idle, only write on meaningful changes to avoid needless pushes.
-    if (!args.isPlaying && !meaningfulChange) return;
+    if (args.isPlaying || meaningfulChange) {
+      await ctx.db.patch(existing._id, args);
+      return;
+    }
 
-    await ctx.db.patch(existing._id, args);
+    // Idle with no meaningful change — only bump fetchedAt so the
+    // server-side throttle stays accurate (avoids wasteful API calls).
+    await ctx.db.patch(existing._id, { fetchedAt: args.fetchedAt });
   },
 });
 
@@ -260,7 +267,7 @@ export const refreshNowPlaying = internalAction({
 
     if (response.status === 204) {
       const existing = await ctx.runQuery(internal.spotify.getNowPlaying);
-      if (existing?.isPlaying) {
+      if (existing) {
         await ctx.runMutation(
           internal.spotify.updateNowPlaying,
           toIdleSnapshot(existing),
@@ -279,7 +286,7 @@ export const refreshNowPlaying = internalAction({
 
     if (!normalized) {
       const existing = await ctx.runQuery(internal.spotify.getNowPlaying);
-      if (existing?.isPlaying) {
+      if (existing) {
         await ctx.runMutation(
           internal.spotify.updateNowPlaying,
           toIdleSnapshot(existing),

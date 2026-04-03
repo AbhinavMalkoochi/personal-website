@@ -56,7 +56,7 @@ export default function SpotifyNowPlaying() {
     useEffect(() => {
         const refresh = () => {
             if (document.visibilityState === "visible") {
-                ensureFresh().catch(() => {});
+                ensureFresh().catch(console.warn);
             }
         };
 
@@ -79,25 +79,37 @@ export default function SpotifyNowPlaying() {
     useEffect(() => {
         if (!data?.isPlaying || !data.durationMs) return;
 
-        const elapsed = Date.now() - data.fetchedAt;
-        const estimatedProgress = data.progressMs + elapsed;
+        const timeSinceFetch = Math.max(0, Date.now() - data.fetchedAt);
+        const estimatedProgress = data.progressMs + timeSinceFetch;
         const msRemaining = data.durationMs - estimatedProgress;
 
-        if (msRemaining <= 0 || msRemaining > 600_000) return;
+        if (msRemaining > 600_000) return;
+
+        // If the track already ended (or is about to), refresh immediately
+        // with a small buffer; otherwise schedule for when it should end.
+        const delay = Math.max(500, msRemaining + 1_000);
 
         const timeoutId = setTimeout(() => {
-            ensureFresh().catch(() => {});
-        }, msRemaining + 1_000);
+            ensureFresh().catch(console.warn);
+        }, delay);
 
         return () => clearTimeout(timeoutId);
     }, [data, ensureFresh]);
 
-    // Smooth progress bar via requestAnimationFrame
+    // Smooth progress bar via requestAnimationFrame.
+    // Offsets by the time elapsed between server fetch and client render
+    // so the bar doesn't jump backward on each data refresh.
     useEffect(() => {
-        if (!data?.isPlaying) {
-            if (timeRef.current && data) timeRef.current.textContent = formatTime(data.progressMs);
-            if (barRef.current && data) {
-                const pct = data.durationMs > 0 ? (data.progressMs / data.durationMs) * 100 : 0;
+        if (!data) return;
+
+        const duration = data.durationMs;
+        const timeSinceFetch = Math.max(0, Date.now() - data.fetchedAt);
+        const correctedProgress = Math.min(data.progressMs + (data.isPlaying ? timeSinceFetch : 0), duration);
+
+        if (!data.isPlaying) {
+            if (timeRef.current) timeRef.current.textContent = formatTime(correctedProgress);
+            if (barRef.current) {
+                const pct = duration > 0 ? (correctedProgress / duration) * 100 : 0;
                 barRef.current.style.width = `${pct}%`;
             }
             return;
@@ -105,12 +117,10 @@ export default function SpotifyNowPlaying() {
 
         let rafId: number;
         const startedAt = Date.now();
-        const baseProgress = data.progressMs;
-        const duration = data.durationMs;
 
         const tick = () => {
             const elapsed = Math.max(0, Date.now() - startedAt);
-            const current = Math.min(baseProgress + elapsed, duration);
+            const current = Math.min(correctedProgress + elapsed, duration);
             const percent = duration > 0 ? (current / duration) * 100 : 0;
 
             if (timeRef.current) timeRef.current.textContent = formatTime(current);
