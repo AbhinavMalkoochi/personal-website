@@ -1,30 +1,29 @@
 /**
- * Spotify integration with secure credential handling.
+ * Spotify integration — simple SWR caching layer.
  *
- * Security model:
- * - spotifyCredentials table (tokens) is ONLY accessed by internal functions
- * - The sole public function (currentlyPlaying) reads from spotifyNowPlaying (metadata only)
- * - All Spotify API calls happen server-side via cron, never from the client
- * - Client secrets live in Convex environment variables, never in client bundles
+ * Architecture:
+ *  - spotifyNowPlaying holds the last-known playback state.
+ *  - Clients subscribe via `currentlyPlaying` (reactive query).
+ *  - Clients call `ensureFreshNowPlaying` every ~10s; the action
+ *    short-circuits if the cache is younger than THROTTLE_MS.
+ *  - A cron calls `refreshNowPlaying` every few minutes as a safety net.
+ *  - Credentials stay internal — no tokens ever reach the client.
  */
 import { v } from "convex/values";
-import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import {
+  action,
+  internalAction,
+  internalMutation,
+  internalQuery,
+  query,
+} from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
-const LOCK_TTL_MS = 10_000;
-const PLAYING_STALE_MS = 15_000;
-const IDLE_STALE_MS = 120_000;
-const PROGRESS_CORRECTION_MS = 90_000;
-const SERVER_ERROR_BACKOFF_MS = 30_000;
-const RATE_LIMIT_BACKOFF_MS = 60_000;
-const MAX_BACKOFF_MS = 5 * 60 * 1000;
-const VIEWER_PRESENCE_TTL_MS = 120_000;
-const NO_VIEWER_PLAYING_REFRESH_MS = 10 * 60 * 1000;
-const NO_VIEWER_IDLE_REFRESH_MS = 30 * 60 * 1000;
+const THROTTLE_MS = 10_000;
 
-// ============ Spotify API Types ============
+// ─── Spotify API types ───────────────────────────────────────────────
 
 interface SpotifyTokenResponse {
   access_token: string;
@@ -71,27 +70,22 @@ function toOptionalString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function parseRetryAfterMs(retryAfter: string | null): number | null {
-  if (!retryAfter) return null;
-
-  const asSeconds = Number(retryAfter);
-  if (Number.isFinite(asSeconds) && asSeconds >= 0) {
-    return Math.round(asSeconds * 1000);
-  }
-
-  const parsedDate = Date.parse(retryAfter);
-  if (!Number.isNaN(parsedDate)) {
-    return Math.max(0, parsedDate - Date.now());
-  }
-
-  return null;
+function toIdleSnapshot(existing: Doc<"spotifyNowPlaying">): NowPlayingSnapshot {
+  return {
+    isPlaying: false,
+    trackName: existing.trackName,
+    artistName: existing.artistName,
+    albumName: existing.albumName,
+    albumArt: existing.albumArt,
+    trackUrl: existing.trackUrl ?? null,
+    trackId: toOptionalString(existing.trackId),
+    progressMs: Math.min(existing.progressMs, existing.durationMs),
+    durationMs: existing.durationMs,
+    fetchedAt: Date.now(),
+  };
 }
 
-function clampBackoffMs(valueMs: number): number {
-  return Math.min(Math.max(0, valueMs), MAX_BACKOFF_MS);
-}
-
-// ============ Public Query (client subscribes to this) ============
+// ─── Public query (clients subscribe here) ───────────────────────────
 
 export const currentlyPlaying = query({
   args: {},
@@ -114,29 +108,7 @@ export const currentlyPlaying = query({
   },
 });
 
-export const reportViewerPresence = mutation({
-  args: {
-    sessionId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("spotifyViewerPresence")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
-      .first();
-
-    const now = Date.now();
-    if (existing) {
-      await ctx.db.patch(existing._id, { lastSeenAt: now });
-    } else {
-      await ctx.db.insert("spotifyViewerPresence", {
-        sessionId: args.sessionId,
-        lastSeenAt: now,
-      });
-    }
-  },
-});
-
-// ============ Internal: Credential Management ============
+// ─── Internal helpers ────────────────────────────────────────────────
 
 export const getCredentials = internalQuery({
   args: {},
@@ -145,78 +117,10 @@ export const getCredentials = internalQuery({
   },
 });
 
-export const getPollState = internalQuery({
+export const getNowPlaying = internalQuery({
   args: {},
-  handler: async (ctx): Promise<Doc<"spotifyPollState"> | null> => {
-    return await ctx.db.query("spotifyPollState").first();
-  },
-});
-
-export const hasRecentViewerPresence = internalQuery({
-  args: {
-    now: v.number(),
-    ttlMs: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const viewers = await ctx.db.query("spotifyViewerPresence").collect();
-    return viewers.some((viewer) => args.now - viewer.lastSeenAt <= args.ttlMs);
-  },
-});
-
-export const tryAcquirePollLock = internalMutation({
-  args: {
-    now: v.number(),
-    lockTtlMs: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db.query("spotifyPollState").first();
-
-    if (existing && existing.lockUntil > args.now) {
-      return false;
-    }
-
-    const payload = {
-      lockUntil: args.now + args.lockTtlMs,
-      nextAllowedPollAt: existing?.nextAllowedPollAt ?? 0,
-      lastAttemptAt: args.now,
-      lastSuccessAt: existing?.lastSuccessAt ?? 0,
-    };
-
-    if (existing) {
-      await ctx.db.patch(existing._id, payload);
-    } else {
-      await ctx.db.insert("spotifyPollState", payload);
-    }
-
-    return true;
-  },
-});
-
-export const releasePollLock = internalMutation({
-  args: {
-    now: v.number(),
-    success: v.boolean(),
-    backoffMs: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db.query("spotifyPollState").first();
-    const effectiveBackoffMs = clampBackoffMs(args.backoffMs ?? 0);
-    const nextAllowedPollAt = args.success
-      ? 0
-      : Math.max(existing?.nextAllowedPollAt ?? 0, args.now + effectiveBackoffMs);
-
-    const payload = {
-      lockUntil: 0,
-      nextAllowedPollAt,
-      lastAttemptAt: args.now,
-      lastSuccessAt: args.success ? args.now : existing?.lastSuccessAt ?? 0,
-    };
-
-    if (existing) {
-      await ctx.db.patch(existing._id, payload);
-    } else {
-      await ctx.db.insert("spotifyPollState", payload);
-    }
+  handler: async (ctx) => {
+    return await ctx.db.query("spotifyNowPlaying").first();
   },
 });
 
@@ -235,8 +139,6 @@ export const updateTokens = internalMutation({
     }
   },
 });
-
-// ============ Internal: Now Playing Cache ============
 
 export const updateNowPlaying = internalMutation({
   args: {
@@ -258,59 +160,23 @@ export const updateNowPlaying = internalMutation({
       return;
     }
 
-    const metadataChanged =
+    const meaningfulChange =
+      existing.trackId !== args.trackId ||
+      existing.isPlaying !== args.isPlaying ||
       existing.trackName !== args.trackName ||
       existing.artistName !== args.artistName ||
       existing.albumName !== args.albumName ||
-      existing.albumArt !== args.albumArt ||
-      (existing.trackUrl ?? null) !== (args.trackUrl ?? null) ||
-      (existing.trackId ?? null) !== (args.trackId ?? null) ||
       existing.durationMs !== args.durationMs;
 
-    const playbackStateChanged = existing.isPlaying !== args.isPlaying;
-    const progressDelta = Math.abs(existing.progressMs - args.progressMs);
-    const correctionDue = args.isPlaying && args.fetchedAt - existing.fetchedAt >= PROGRESS_CORRECTION_MS;
-    const seekLikely = args.isPlaying && progressDelta >= 5000;
-
-    if (!metadataChanged && !playbackStateChanged && !correctionDue && !seekLikely) {
-      return;
-    }
+    // Always write when playing (keeps progress in sync for subscribers).
+    // When idle, only write on meaningful changes to avoid needless pushes.
+    if (!args.isPlaying && !meaningfulChange) return;
 
     await ctx.db.patch(existing._id, args);
   },
 });
 
-export const getNowPlayingSnapshot = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("spotifyNowPlaying").first();
-  },
-});
-
-export const ensureFreshNowPlaying = action({
-  args: {},
-  handler: async (ctx) => {
-    const now = Date.now();
-    const snapshot = await ctx.runQuery(internal.spotify.getNowPlayingSnapshot);
-
-    if (snapshot) {
-      const staleAfterMs = snapshot.isPlaying ? PLAYING_STALE_MS : IDLE_STALE_MS;
-      if (now - snapshot.fetchedAt < staleAfterMs) {
-        return { refreshed: false, reason: "fresh" as const };
-      }
-    }
-
-    const pollState = await ctx.runQuery(internal.spotify.getPollState);
-    if (pollState && pollState.nextAllowedPollAt > now) {
-      return { refreshed: false, reason: "backoff" as const };
-    }
-
-    await ctx.runAction(internal.spotify.pollNowPlaying);
-    return { refreshed: true, reason: "polled" as const };
-  },
-});
-
-// ============ Token Refresh ============
+// ─── Token refresh ───────────────────────────────────────────────────
 
 async function refreshAccessToken(
   refreshTokenValue: string,
@@ -349,15 +215,14 @@ async function refreshAccessToken(
 }
 
 function normalizeNowPlaying(data: SpotifyCurrentlyPlaying): NowPlayingSnapshot | null {
-  if (!data.item || data.currently_playing_type !== "track") {
-    return null;
-  }
+  if (!data.item || data.currently_playing_type !== "track") return null;
 
   const track = data.item;
   const durationMs = Math.max(0, track.duration_ms ?? 0);
   const progressRaw = data.progress_ms ?? 0;
   const progressMs = Math.min(Math.max(0, progressRaw), durationMs);
-  const trackUrl = track.external_urls?.spotify ?? track.album.external_urls?.spotify ?? null;
+  const trackUrl =
+    track.external_urls?.spotify ?? track.album.external_urls?.spotify ?? null;
 
   return {
     isPlaying: data.is_playing,
@@ -373,119 +238,70 @@ function normalizeNowPlaying(data: SpotifyCurrentlyPlaying): NowPlayingSnapshot 
   };
 }
 
-// ============ Cron: Poll Spotify API ============
+// ─── Core refresh (internal action — called by cron & public action) ─
 
-export const pollNowPlaying = internalAction({
+export const refreshNowPlaying = internalAction({
   args: {},
   handler: async (ctx) => {
-    const startTime = Date.now();
+    let credentials = await ctx.runQuery(internal.spotify.getCredentials);
+    if (!credentials) return;
 
-    const snapshot = await ctx.runQuery(internal.spotify.getNowPlayingSnapshot);
-    const hasRecentViewers = await ctx.runQuery(internal.spotify.hasRecentViewerPresence, {
-      now: startTime,
-      ttlMs: VIEWER_PRESENCE_TTL_MS,
-    });
-
-    if (!hasRecentViewers && snapshot) {
-      const ageMs = startTime - snapshot.fetchedAt;
-      const staleThreshold = snapshot.isPlaying ? NO_VIEWER_PLAYING_REFRESH_MS : NO_VIEWER_IDLE_REFRESH_MS;
-      if (ageMs < staleThreshold) {
-        return;
-      }
+    if (credentials.expiresAt < Date.now() + REFRESH_BUFFER_MS) {
+      const newTokens = await refreshAccessToken(credentials.refreshToken);
+      if (!newTokens) return;
+      await ctx.runMutation(internal.spotify.updateTokens, newTokens);
+      credentials = { ...credentials, ...newTokens };
     }
 
-    const pollState = await ctx.runQuery(internal.spotify.getPollState);
-    if (pollState && pollState.nextAllowedPollAt > startTime) {
+    const response = await fetch(
+      "https://api.spotify.com/v1/me/player/currently-playing",
+      { headers: { Authorization: `Bearer ${credentials.accessToken}` } },
+    );
+
+    if (response.status === 204) {
+      const existing = await ctx.runQuery(internal.spotify.getNowPlaying);
+      if (existing?.isPlaying) {
+        await ctx.runMutation(
+          internal.spotify.updateNowPlaying,
+          toIdleSnapshot(existing),
+        );
+      }
       return;
     }
 
-    const lockAcquired = await ctx.runMutation(internal.spotify.tryAcquirePollLock, {
-      now: startTime,
-      lockTtlMs: LOCK_TTL_MS,
-    });
-    if (!lockAcquired) {
+    if (!response.ok) {
+      console.error("Spotify API error:", response.status);
       return;
     }
 
-    let success = false;
-    let backoffMs = 0;
+    const data = (await response.json()) as SpotifyCurrentlyPlaying;
+    const normalized = normalizeNowPlaying(data);
 
-    const markCurrentTrackAsNotPlaying = async () => {
-      const existing = await ctx.runQuery(internal.spotify.getNowPlayingSnapshot);
-      if (!existing || !existing.isPlaying) {
-        return;
+    if (!normalized) {
+      const existing = await ctx.runQuery(internal.spotify.getNowPlaying);
+      if (existing?.isPlaying) {
+        await ctx.runMutation(
+          internal.spotify.updateNowPlaying,
+          toIdleSnapshot(existing),
+        );
       }
-
-      await ctx.runMutation(internal.spotify.updateNowPlaying, {
-        isPlaying: false,
-        trackName: existing.trackName,
-        artistName: existing.artistName,
-        albumName: existing.albumName,
-        albumArt: existing.albumArt,
-        trackUrl: existing.trackUrl ?? null,
-        trackId: toOptionalString(existing.trackId),
-        progressMs: Math.min(existing.progressMs, existing.durationMs),
-        durationMs: existing.durationMs,
-        fetchedAt: Date.now(),
-      });
-    };
-
-    try {
-      let credentials = await ctx.runQuery(internal.spotify.getCredentials);
-      if (!credentials) return;
-
-      if (credentials.expiresAt < Date.now() + REFRESH_BUFFER_MS) {
-        const newTokens = await refreshAccessToken(credentials.refreshToken);
-        if (!newTokens) return;
-        await ctx.runMutation(internal.spotify.updateTokens, newTokens);
-        credentials = { ...credentials, ...newTokens };
-      }
-
-      const response = await fetch(
-        "https://api.spotify.com/v1/me/player/currently-playing",
-        { headers: { Authorization: `Bearer ${credentials.accessToken}` } },
-      );
-
-      // 204 = nothing playing
-      if (response.status === 204) {
-        await markCurrentTrackAsNotPlaying();
-        success = true;
-        return;
-      }
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          console.error("Spotify API authorization error:", response.status);
-        } else if (response.status === 429) {
-          const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
-          backoffMs = clampBackoffMs(retryAfterMs ?? RATE_LIMIT_BACKOFF_MS);
-          console.error("Spotify API rate limit reached");
-        } else if (response.status >= 500) {
-          backoffMs = clampBackoffMs(SERVER_ERROR_BACKOFF_MS);
-          console.error("Spotify API server error:", response.status);
-        } else {
-          console.error("Spotify API error:", response.status);
-        }
-        return;
-      }
-
-      const data = (await response.json()) as SpotifyCurrentlyPlaying;
-      const normalized = normalizeNowPlaying(data);
-
-      if (!normalized) {
-        await markCurrentTrackAsNotPlaying();
-        success = true;
-        return;
-      }
-
-      await ctx.runMutation(internal.spotify.updateNowPlaying, normalized);
-      success = true;
-    } finally {
-      await ctx.runMutation(internal.spotify.releasePollLock, {
-        now: Date.now(),
-        success,
-        backoffMs,
-      });
+      return;
     }
+
+    await ctx.runMutation(internal.spotify.updateNowPlaying, normalized);
+  },
+});
+
+// ─── Public action (frontend calls this every ~10s) ──────────────────
+
+export const ensureFreshNowPlaying = action({
+  args: {},
+  handler: async (ctx) => {
+    const current = await ctx.runQuery(internal.spotify.getNowPlaying);
+    if (current && Date.now() - current.fetchedAt < THROTTLE_MS) {
+      return { refreshed: false };
+    }
+    await ctx.runAction(internal.spotify.refreshNowPlaying);
+    return { refreshed: true };
   },
 });

@@ -20,16 +20,4 @@ export default defineSchema({
     durationMs: v.number(),
     fetchedAt: v.number(),
   }),
-
-  spotifyPollState: defineTable({
-    lockUntil: v.number(),
-    nextAllowedPollAt: v.number(),
-    lastAttemptAt: v.number(),
-    lastSuccessAt: v.number(),
-  }),
-
-  spotifyViewerPresence: defineTable({
-    sessionId: v.string(),
-    lastSeenAt: v.number(),
-  }).index("by_sessionId", ["sessionId"]),
 });

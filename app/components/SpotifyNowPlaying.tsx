@@ -1,12 +1,11 @@
 "use client";
 
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { X, Music } from "lucide-react";
 
-// --- Helpers ---
 function formatTime(ms: number): string {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -16,9 +15,7 @@ function formatTime(ms: number): string {
 
 const STORAGE_KEY = "spotify-widget-hidden";
 const VISIBILITY_EVENT = "spotify-widget-visibility";
-const VIEWER_SESSION_STORAGE_KEY = "spotify-viewer-session-id";
-const PLAYING_STALE_MS = 15_000;
-const IDLE_STALE_MS = 120_000;
+const POLL_INTERVAL_MS = 10_000;
 
 function subscribeVisibility(onStoreChange: () => void) {
     window.addEventListener("storage", onStoreChange);
@@ -36,19 +33,6 @@ const setHidden = (nextHidden: boolean) => {
     window.dispatchEvent(new Event(VISIBILITY_EVENT));
 };
 
-function getOrCreateViewerSessionId(): string {
-    const existing = localStorage.getItem(VIEWER_SESSION_STORAGE_KEY);
-    if (existing) return existing;
-
-    const nextId = typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    localStorage.setItem(VIEWER_SESSION_STORAGE_KEY, nextId);
-    return nextId;
-}
-
-// --- Sub-components ---
 function SoundBars() {
     return (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
@@ -61,110 +45,73 @@ function SoundBars() {
     );
 }
 
-// --- Main Component ---
 export default function SpotifyNowPlaying() {
     const data = useQuery(api.spotify.currentlyPlaying);
-    const ensureFreshNowPlaying = useAction(api.spotify.ensureFreshNowPlaying);
-    const reportViewerPresence = useMutation(api.spotify.reportViewerPresence);
+    const ensureFresh = useAction(api.spotify.ensureFreshNowPlaying);
     const timeRef = useRef<HTMLSpanElement>(null);
     const barRef = useRef<HTMLDivElement>(null);
-    const viewerSessionRef = useRef<string | null>(null);
-    const refreshInFlightRef = useRef(false);
-    const lastRefreshAttemptRef = useRef(0);
     const isHidden = useSyncExternalStore(subscribeVisibility, getHiddenSnapshot, () => false);
-    const safeData = useMemo(() => {
-        if (!data) return null;
-        return {
-            ...data,
-            progressMs: Math.max(0, data.progressMs),
-            durationMs: Math.max(0, data.durationMs),
-            trackUrl: data.trackUrl ?? null,
-            fetchedAt: Math.max(0, data.fetchedAt),
-        };
-    }, [data]);
 
-    const isPlaying = Boolean(safeData?.isPlaying);
-
+    // Stable 10s polling interval + refresh on mount and tab re-focus
     useEffect(() => {
-        if (!viewerSessionRef.current) {
-            viewerSessionRef.current = getOrCreateViewerSessionId();
-        }
-
-        const reportPresence = () => {
-            if (document.visibilityState !== "visible" || !viewerSessionRef.current) {
-                return;
-            }
-
-            void reportViewerPresence({ sessionId: viewerSessionRef.current }).catch(() => {
-                // Presence should be best-effort and never block rendering.
-            });
-        };
-
-        const refresh = (force: boolean) => {
-            const now = Date.now();
-            if (refreshInFlightRef.current) return;
-            if (!force && now - lastRefreshAttemptRef.current < 5000) return;
-
-            if (!force && safeData) {
-                const staleAfterMs = safeData.isPlaying ? PLAYING_STALE_MS : IDLE_STALE_MS;
-                if (now - safeData.fetchedAt < staleAfterMs) {
-                    return;
-                }
-            }
-
-            lastRefreshAttemptRef.current = now;
-            refreshInFlightRef.current = true;
-            void ensureFreshNowPlaying().catch(() => {
-                // Ignore transient action failures; the safety cron continues to backfill.
-            }).finally(() => {
-                refreshInFlightRef.current = false;
-            });
-        };
-
-        const onVisible = () => {
+        const refresh = () => {
             if (document.visibilityState === "visible") {
-                reportPresence();
-                refresh(true);
+                ensureFresh().catch(() => {});
             }
         };
 
-        const intervalMs = isPlaying ? 20_000 : 90_000;
+        refresh();
 
-        reportPresence();
-        refresh(true);
+        const intervalId = setInterval(refresh, POLL_INTERVAL_MS);
 
-        const presenceIntervalId = window.setInterval(() => {
-            reportPresence();
-        }, 60_000);
-
-        document.addEventListener("visibilitychange", onVisible);
-        window.addEventListener("focus", onVisible);
-
-        const intervalId = window.setInterval(() => {
-            if (document.visibilityState === "visible") {
-                refresh(false);
-            }
-        }, intervalMs);
+        const onVisibilityChange = () => {
+            if (document.visibilityState === "visible") refresh();
+        };
+        document.addEventListener("visibilitychange", onVisibilityChange);
 
         return () => {
-            document.removeEventListener("visibilitychange", onVisible);
-            window.removeEventListener("focus", onVisible);
-            window.clearInterval(intervalId);
-            window.clearInterval(presenceIntervalId);
+            clearInterval(intervalId);
+            document.removeEventListener("visibilitychange", onVisibilityChange);
         };
-    }, [ensureFreshNowPlaying, isPlaying, reportViewerPresence, safeData]);
+    }, [ensureFresh]);
 
+    // Predictive fetch: fire right when the current song should end
     useEffect(() => {
-        if (!isPlaying || !safeData) return;
+        if (!data?.isPlaying || !data.durationMs) return;
+
+        const elapsed = Date.now() - data.fetchedAt;
+        const estimatedProgress = data.progressMs + elapsed;
+        const msRemaining = data.durationMs - estimatedProgress;
+
+        if (msRemaining <= 0 || msRemaining > 600_000) return;
+
+        const timeoutId = setTimeout(() => {
+            ensureFresh().catch(() => {});
+        }, msRemaining + 1_000);
+
+        return () => clearTimeout(timeoutId);
+    }, [data, ensureFresh]);
+
+    // Smooth progress bar via requestAnimationFrame
+    useEffect(() => {
+        if (!data?.isPlaying) {
+            if (timeRef.current && data) timeRef.current.textContent = formatTime(data.progressMs);
+            if (barRef.current && data) {
+                const pct = data.durationMs > 0 ? (data.progressMs / data.durationMs) * 100 : 0;
+                barRef.current.style.width = `${pct}%`;
+            }
+            return;
+        }
+
         let rafId: number;
-        const startedAtClientMs = Date.now();
-        const baseProgressMs = safeData.progressMs;
+        const startedAt = Date.now();
+        const baseProgress = data.progressMs;
+        const duration = data.durationMs;
 
         const tick = () => {
-            // Use client-local elapsed time to avoid any server/browser clock skew artifacts.
-            const elapsed = Math.max(0, Date.now() - startedAtClientMs);
-            const current = Math.min(baseProgressMs + elapsed, safeData.durationMs);
-            const percent = safeData.durationMs > 0 ? (current / safeData.durationMs) * 100 : 0;
+            const elapsed = Math.max(0, Date.now() - startedAt);
+            const current = Math.min(baseProgress + elapsed, duration);
+            const percent = duration > 0 ? (current / duration) * 100 : 0;
 
             if (timeRef.current) timeRef.current.textContent = formatTime(current);
             if (barRef.current) barRef.current.style.width = `${percent}%`;
@@ -172,9 +119,9 @@ export default function SpotifyNowPlaying() {
             rafId = requestAnimationFrame(tick);
         };
 
-        rafId = requestAnimationFrame(tick);
+        tick();
         return () => cancelAnimationFrame(rafId);
-    }, [safeData, isPlaying]);
+    }, [data]);
 
     if (isHidden) {
         return (
@@ -190,15 +137,14 @@ export default function SpotifyNowPlaying() {
 
     if (!data) return null;
 
-    const initialPercent = safeData && safeData.durationMs > 0
-        ? (safeData.progressMs / safeData.durationMs) * 100
+    const initialPercent = data.durationMs > 0
+        ? (data.progressMs / data.durationMs) * 100
         : 0;
 
     return (
         <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 left-4 sm:left-auto z-50 group">
             <div className="relative w-full sm:w-[320px] bg-white border border-gray-100 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] p-3 sm:p-4 transition-all duration-300">
 
-                {/* Close Button — always visible on touch, hover-reveal on desktop */}
                 <button
                     onClick={() => setHidden(true)}
                     className="absolute top-2 right-2 p-1.5 rounded-full text-gray-400 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:text-gray-500 active:scale-90"
@@ -207,34 +153,36 @@ export default function SpotifyNowPlaying() {
                 </button>
 
                 <div className="flex items-center gap-3 sm:gap-4">
-                    {/* Artwork */}
                     <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden shrink-0 shadow-sm bg-gray-50 border border-black/5">
-                        {safeData?.albumArt ? (
+                        {data.albumArt ? (
                             <Image
-                                src={safeData.albumArt}
+                                src={data.albumArt}
                                 alt="Album Art"
                                 fill
                                 className="object-cover"
                                 unoptimized
                             />
+                        ) : data.isPlaying ? (
+                            <SoundBars />
                         ) : (
-                            isPlaying ? <SoundBars /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><Music size={20} /></div>
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                <Music size={20} />
+                            </div>
                         )}
                     </div>
 
-                    {/* Metadata Content */}
                     <div className="flex-1 min-w-0">
                         <div className="mb-2">
                             <h3 className="text-sm font-bold text-gray-900 truncate leading-tight">
-                                {safeData?.trackName || "Not Playing"}
+                                {data.trackName || "Not Playing"}
                             </h3>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 <p className="text-xs font-medium text-gray-500 truncate">
-                                    {safeData?.artistName || "Spotify"}
+                                    {data.artistName || "Spotify"}
                                 </p>
-                                {safeData?.trackUrl && (
+                                {data.trackUrl && (
                                     <a
-                                        href={safeData.trackUrl}
+                                        href={data.trackUrl}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="shrink-0 hover:brightness-110 transition-all"
@@ -245,7 +193,6 @@ export default function SpotifyNowPlaying() {
                             </div>
                         </div>
 
-                        {/* Progress */}
                         <div className="space-y-1">
                             <div className="relative h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                                 <div
@@ -255,8 +202,8 @@ export default function SpotifyNowPlaying() {
                                 />
                             </div>
                             <div className="flex justify-between text-[10px] font-medium text-gray-400 tabular-nums">
-                                <span ref={timeRef}>{formatTime(safeData?.progressMs || 0)}</span>
-                                <span>{safeData ? formatTime(safeData.durationMs) : "0:00"}</span>
+                                <span ref={timeRef}>{formatTime(data.progressMs || 0)}</span>
+                                <span>{formatTime(data.durationMs)}</span>
                             </div>
                         </div>
                     </div>
