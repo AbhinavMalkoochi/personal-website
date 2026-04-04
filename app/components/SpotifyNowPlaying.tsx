@@ -2,7 +2,7 @@
 
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { X, Music } from "lucide-react";
 
@@ -15,7 +15,7 @@ function formatTime(ms: number): string {
 
 const STORAGE_KEY = "spotify-widget-hidden";
 const VISIBILITY_EVENT = "spotify-widget-visibility";
-const POLL_INTERVAL_MS = 10_000;
+const POLL_INTERVAL_MS = 5_000;
 
 function subscribeVisibility(onStoreChange: () => void) {
     window.addEventListener("storage", onStoreChange);
@@ -48,11 +48,10 @@ function SoundBars() {
 export default function SpotifyNowPlaying() {
     const data = useQuery(api.spotify.currentlyPlaying);
     const ensureFresh = useAction(api.spotify.ensureFreshNowPlaying);
-    const timeRef = useRef<HTMLSpanElement>(null);
-    const barRef = useRef<HTMLDivElement>(null);
+    const [now, setNow] = useState(() => Date.now());
     const isHidden = useSyncExternalStore(subscribeVisibility, getHiddenSnapshot, () => false);
 
-    // Stable 10s polling interval + refresh on mount and tab re-focus
+    // Simple polling + refresh on mount/tab focus.
     useEffect(() => {
         const refresh = () => {
             if (document.visibilityState === "visible") {
@@ -75,63 +74,15 @@ export default function SpotifyNowPlaying() {
         };
     }, [ensureFresh]);
 
-    // Predictive fetch: fire right when the current song should end
     useEffect(() => {
-        if (!data?.isPlaying || !data.durationMs) return;
+        if (!data?.isPlaying) return;
 
-        const timeSinceFetch = Math.max(0, Date.now() - data.fetchedAt);
-        const estimatedProgress = data.progressMs + timeSinceFetch;
-        const msRemaining = data.durationMs - estimatedProgress;
+        const intervalId = window.setInterval(() => {
+            setNow(Date.now());
+        }, 1_000);
 
-        if (msRemaining > 600_000) return;
-
-        // If the track already ended (or is about to), refresh immediately
-        // with a small buffer; otherwise schedule for when it should end.
-        const delay = Math.max(500, msRemaining + 1_000);
-
-        const timeoutId = setTimeout(() => {
-            ensureFresh().catch(console.warn);
-        }, delay);
-
-        return () => clearTimeout(timeoutId);
-    }, [data, ensureFresh]);
-
-    // Smooth progress bar via requestAnimationFrame.
-    // Offsets by the time elapsed between server fetch and client render
-    // so the bar doesn't jump backward on each data refresh.
-    useEffect(() => {
-        if (!data) return;
-
-        const duration = data.durationMs;
-        const timeSinceFetch = Math.max(0, Date.now() - data.fetchedAt);
-        const correctedProgress = Math.min(data.progressMs + (data.isPlaying ? timeSinceFetch : 0), duration);
-
-        if (!data.isPlaying) {
-            if (timeRef.current) timeRef.current.textContent = formatTime(correctedProgress);
-            if (barRef.current) {
-                const pct = duration > 0 ? (correctedProgress / duration) * 100 : 0;
-                barRef.current.style.width = `${pct}%`;
-            }
-            return;
-        }
-
-        let rafId: number;
-        const startedAt = Date.now();
-
-        const tick = () => {
-            const elapsed = Math.max(0, Date.now() - startedAt);
-            const current = Math.min(correctedProgress + elapsed, duration);
-            const percent = duration > 0 ? (current / duration) * 100 : 0;
-
-            if (timeRef.current) timeRef.current.textContent = formatTime(current);
-            if (barRef.current) barRef.current.style.width = `${percent}%`;
-
-            rafId = requestAnimationFrame(tick);
-        };
-
-        tick();
-        return () => cancelAnimationFrame(rafId);
-    }, [data]);
+        return () => window.clearInterval(intervalId);
+    }, [data?.isPlaying]);
 
     if (isHidden) {
         return (
@@ -147,9 +98,15 @@ export default function SpotifyNowPlaying() {
 
     if (!data) return null;
 
-    const initialPercent = data.durationMs > 0
-        ? (data.progressMs / data.durationMs) * 100
+    const progressMs = data.isPlaying
+        ? Math.min(data.durationMs, data.progressMs + Math.max(0, now - data.fetchedAt))
         : 0;
+    const progressPercent = data.durationMs > 0
+        ? (progressMs / data.durationMs) * 100
+        : 0;
+    const title = data.isPlaying ? data.trackName : "Not Playing";
+    const subtitle = data.isPlaying ? data.artistName : "Spotify";
+    const trackUrl = data.isPlaying ? data.trackUrl : null;
 
     return (
         <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 left-4 sm:left-auto z-50 group">
@@ -164,11 +121,12 @@ export default function SpotifyNowPlaying() {
 
                 <div className="flex items-center gap-3 sm:gap-4">
                     <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden shrink-0 shadow-sm bg-gray-50 border border-black/5">
-                        {data.albumArt ? (
+                        {data.isPlaying && data.albumArt ? (
                             <Image
                                 src={data.albumArt}
                                 alt="Album Art"
                                 fill
+                                sizes="(max-width: 640px) 48px, 56px"
                                 className="object-cover"
                                 unoptimized
                             />
@@ -184,15 +142,15 @@ export default function SpotifyNowPlaying() {
                     <div className="flex-1 min-w-0">
                         <div className="mb-2">
                             <h3 className="text-sm font-bold text-gray-900 truncate leading-tight">
-                                {data.trackName || "Not Playing"}
+                                {title}
                             </h3>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 <p className="text-xs font-medium text-gray-500 truncate">
-                                    {data.artistName || "Spotify"}
+                                    {subtitle}
                                 </p>
-                                {data.trackUrl && (
+                                {trackUrl && (
                                     <a
-                                        href={data.trackUrl}
+                                        href={trackUrl}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="shrink-0 hover:brightness-110 transition-all"
@@ -206,13 +164,12 @@ export default function SpotifyNowPlaying() {
                         <div className="space-y-1">
                             <div className="relative h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                                 <div
-                                    ref={barRef}
-                                    style={{ width: `${initialPercent}%` }}
+                                    style={{ width: `${progressPercent}%` }}
                                     className="absolute h-full bg-[#1DB954] transition-all duration-300 ease-linear"
                                 />
                             </div>
                             <div className="flex justify-between text-[10px] font-medium text-gray-400 tabular-nums">
-                                <span ref={timeRef}>{formatTime(data.progressMs || 0)}</span>
+                                <span>{formatTime(progressMs)}</span>
                                 <span>{formatTime(data.durationMs)}</span>
                             </div>
                         </div>

@@ -21,7 +21,7 @@ import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
-const THROTTLE_MS = 10_000;
+const THROTTLE_MS = 5_000;
 
 // ─── Spotify API types ───────────────────────────────────────────────
 
@@ -70,17 +70,43 @@ function toOptionalString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function toIdleSnapshot(existing: Doc<"spotifyNowPlaying">): NowPlayingSnapshot {
+function getDocTimestamp(
+  doc: { _creationTime: number; fetchedAt?: number },
+): number {
+  return typeof doc.fetchedAt === "number" ? doc.fetchedAt : doc._creationTime;
+}
+
+function getLatestDoc<T extends { _id: unknown; _creationTime: number; fetchedAt?: number }>(
+  docs: T[],
+): T | null {
+  let latest: T | null = null;
+  for (const doc of docs) {
+    if (!latest || getDocTimestamp(doc) > getDocTimestamp(latest)) {
+      latest = doc;
+    }
+  }
+  return latest;
+}
+
+function getDuplicateDocs<
+  T extends { _id: unknown; _creationTime: number; fetchedAt?: number },
+>(docs: T[]): T[] {
+  const latest = getLatestDoc(docs);
+  if (!latest) return [];
+  return docs.filter((doc) => doc._id !== latest._id);
+}
+
+function toIdleSnapshot(): NowPlayingSnapshot {
   return {
     isPlaying: false,
-    trackName: existing.trackName,
-    artistName: existing.artistName,
-    albumName: existing.albumName,
-    albumArt: existing.albumArt,
-    trackUrl: existing.trackUrl ?? null,
-    trackId: toOptionalString(existing.trackId),
-    progressMs: Math.min(existing.progressMs, existing.durationMs),
-    durationMs: existing.durationMs,
+    trackName: "",
+    artistName: "",
+    albumName: "",
+    albumArt: "",
+    trackUrl: null,
+    trackId: undefined,
+    progressMs: 0,
+    durationMs: 0,
     fetchedAt: Date.now(),
   };
 }
@@ -90,7 +116,8 @@ function toIdleSnapshot(existing: Doc<"spotifyNowPlaying">): NowPlayingSnapshot 
 export const currentlyPlaying = query({
   args: {},
   handler: async (ctx) => {
-    const doc = await ctx.db.query("spotifyNowPlaying").first();
+    const docs = await ctx.db.query("spotifyNowPlaying").collect();
+    const doc = getLatestDoc(docs);
     if (!doc) return null;
 
     return {
@@ -113,14 +140,16 @@ export const currentlyPlaying = query({
 export const getCredentials = internalQuery({
   args: {},
   handler: async (ctx): Promise<Doc<"spotifyCredentials"> | null> => {
-    return await ctx.db.query("spotifyCredentials").first();
+    const docs = await ctx.db.query("spotifyCredentials").collect();
+    return getLatestDoc(docs);
   },
 });
 
 export const getNowPlaying = internalQuery({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("spotifyNowPlaying").first();
+    const docs = await ctx.db.query("spotifyNowPlaying").collect();
+    return getLatestDoc(docs);
   },
 });
 
@@ -131,11 +160,16 @@ export const updateTokens = internalMutation({
     expiresAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db.query("spotifyCredentials").first();
+    const docs = await ctx.db.query("spotifyCredentials").collect();
+    const existing = getLatestDoc(docs);
     if (existing) {
       await ctx.db.patch(existing._id, args);
     } else {
       await ctx.db.insert("spotifyCredentials", args);
+    }
+
+    for (const duplicate of getDuplicateDocs(docs)) {
+      await ctx.db.delete(duplicate._id);
     }
   },
 });
@@ -154,7 +188,9 @@ export const updateNowPlaying = internalMutation({
     fetchedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db.query("spotifyNowPlaying").first();
+    const docs = await ctx.db.query("spotifyNowPlaying").collect();
+    const existing = getLatestDoc(docs);
+    const duplicates = getDuplicateDocs(docs);
     if (!existing) {
       await ctx.db.insert("spotifyNowPlaying", args);
       return;
@@ -162,7 +198,12 @@ export const updateNowPlaying = internalMutation({
 
     // Reject stale writes — a slower concurrent refresh must not overwrite
     // a newer one (prevents the "wrong song" race condition).
-    if (args.fetchedAt < existing.fetchedAt) return;
+    if (args.fetchedAt < existing.fetchedAt) {
+      for (const duplicate of duplicates) {
+        await ctx.db.delete(duplicate._id);
+      }
+      return;
+    }
 
     const meaningfulChange =
       existing.trackId !== args.trackId ||
@@ -174,12 +215,15 @@ export const updateNowPlaying = internalMutation({
 
     if (args.isPlaying || meaningfulChange) {
       await ctx.db.patch(existing._id, args);
-      return;
+    } else {
+      // Idle with no meaningful change — only bump fetchedAt so the
+      // server-side throttle stays accurate (avoids wasteful API calls).
+      await ctx.db.patch(existing._id, { fetchedAt: args.fetchedAt });
     }
 
-    // Idle with no meaningful change — only bump fetchedAt so the
-    // server-side throttle stays accurate (avoids wasteful API calls).
-    await ctx.db.patch(existing._id, { fetchedAt: args.fetchedAt });
+    for (const duplicate of duplicates) {
+      await ctx.db.delete(duplicate._id);
+    }
   },
 });
 
@@ -266,13 +310,7 @@ export const refreshNowPlaying = internalAction({
     );
 
     if (response.status === 204) {
-      const existing = await ctx.runQuery(internal.spotify.getNowPlaying);
-      if (existing) {
-        await ctx.runMutation(
-          internal.spotify.updateNowPlaying,
-          toIdleSnapshot(existing),
-        );
-      }
+      await ctx.runMutation(internal.spotify.updateNowPlaying, toIdleSnapshot());
       return;
     }
 
@@ -285,13 +323,7 @@ export const refreshNowPlaying = internalAction({
     const normalized = normalizeNowPlaying(data);
 
     if (!normalized) {
-      const existing = await ctx.runQuery(internal.spotify.getNowPlaying);
-      if (existing) {
-        await ctx.runMutation(
-          internal.spotify.updateNowPlaying,
-          toIdleSnapshot(existing),
-        );
-      }
+      await ctx.runMutation(internal.spotify.updateNowPlaying, toIdleSnapshot());
       return;
     }
 
