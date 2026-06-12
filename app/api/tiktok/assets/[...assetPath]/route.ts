@@ -1,4 +1,7 @@
 const DEFAULT_SCROLLSMART_ASSET_ORIGIN = "https://nona-cronish-detachedly.ngrok-free.dev";
+const DEFAULT_TIKTOK_VERIFICATION_FILE = "tiktokhD7OZB296Z2WZP4edptRj6e4mxdWIv8Y.txt";
+const DEFAULT_TIKTOK_VERIFICATION_BODY =
+  "tiktok-developers-site-verification=hD7OZB296Z2WZP4edptRj6e4mxdWIv8Y";
 
 type RouteContext = {
   params: Promise<{
@@ -12,8 +15,8 @@ function getAssetOrigin() {
 }
 
 function verificationResponse(assetPath: string[]) {
-  const fileName = process.env.TIKTOK_URL_VERIFICATION_FILE;
-  const body = process.env.TIKTOK_URL_VERIFICATION_BODY;
+  const fileName = process.env.TIKTOK_URL_VERIFICATION_FILE || DEFAULT_TIKTOK_VERIFICATION_FILE;
+  const body = process.env.TIKTOK_URL_VERIFICATION_BODY || DEFAULT_TIKTOK_VERIFICATION_BODY;
   if (!fileName || !body || assetPath.length !== 1 || assetPath[0] !== fileName) return null;
 
   return new Response(body, {
