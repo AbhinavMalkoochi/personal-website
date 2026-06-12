@@ -2,8 +2,7 @@ const DEFAULT_SCROLLSMART_ASSET_ORIGIN = "https://nona-cronish-detachedly.ngrok-
 
 type RouteContext = {
   params: Promise<{
-    slideshowId: string;
-    slideFile: string;
+    assetPath: string[];
   }>;
 };
 
@@ -12,9 +11,27 @@ function getAssetOrigin() {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 }
 
+function verificationResponse(assetPath: string[]) {
+  const fileName = process.env.TIKTOK_URL_VERIFICATION_FILE;
+  const body = process.env.TIKTOK_URL_VERIFICATION_BODY;
+  if (!fileName || !body || assetPath.length !== 1 || assetPath[0] !== fileName) return null;
+
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
+    },
+  });
+}
+
 export async function GET(_request: Request, context: RouteContext) {
-  const { slideshowId, slideFile } = await context.params;
-  if (!/^slide-\d+\.jpe?g$/i.test(slideFile)) {
+  const { assetPath } = await context.params;
+  const verification = verificationResponse(assetPath);
+  if (verification) return verification;
+
+  const [slideshowId, slideFile] = assetPath;
+  if (assetPath.length !== 2 || !slideshowId || !slideFile || !/^slide-\d+\.jpe?g$/i.test(slideFile)) {
     return Response.json({ error: "Invalid TikTok asset path" }, { status: 400 });
   }
 

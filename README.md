@@ -47,3 +47,5 @@ npm run lint
 ## TikTok Asset Proxy
 
 The route `/api/tiktok/assets/[slideshowId]/[slideFile]` proxies ScrollSmart slideshow JPGs through this verified domain for TikTok `PULL_FROM_URL` publishing. By default it points at the ScrollSmart ngrok domain. Override it in Vercel with `SCROLLSMART_ASSET_ORIGIN` if that tunnel/domain changes.
+
+If TikTok requires URL-prefix verification instead of domain verification, set `TIKTOK_URL_VERIFICATION_FILE` and `TIKTOK_URL_VERIFICATION_BODY` in Vercel from the signature file TikTok gives you.
