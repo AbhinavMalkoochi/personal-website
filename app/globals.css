@@ -741,19 +741,38 @@ button:focus-visible {
 
 /* Contact */
 .contact-section {
+  min-height: clamp(34rem, 62svh, 43rem);
   background:
     radial-gradient(circle at 48% 42%, rgba(0, 111, 236, 0.05), transparent 14rem),
     linear-gradient(180deg, var(--paper), #f7f3eb);
   color: var(--ink);
 }
 
+.contact-section::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+  left: min(31vw, 28rem);
+  top: 9%;
+  width: clamp(14rem, 23vw, 24rem);
+  height: 118%;
+  border-left: 1px dashed rgba(0, 87, 217, 0.22);
+  border-radius: 50%;
+  transform: rotate(-11deg);
+}
+
+.contact-section .section-index {
+  top: clamp(1.35rem, 2.2vw, 1.8rem);
+}
+
 .contact-inner {
   display: grid;
-  grid-template-columns: minmax(18rem, 0.85fr) minmax(18rem, 0.76fr) minmax(20rem, 0.92fr);
-  gap: clamp(2rem, 5vw, 5rem);
+  grid-template-columns: minmax(18rem, 0.78fr) minmax(18rem, 0.72fr) minmax(20rem, 0.98fr);
+  gap: clamp(2rem, 4.5vw, 4.6rem);
   align-items: center;
-  min-height: calc(100svh - 6rem);
-  padding: clamp(4.8rem, 8vw, 7rem) 0 3rem;
+  min-height: auto;
+  padding: clamp(3.8rem, 5.8vw, 5rem) 0 clamp(4.8rem, 8vw, 6.2rem);
 }
 
 .contact-copy,
@@ -763,11 +782,11 @@ button:focus-visible {
 }
 
 .contact-copy h2 {
-  max-width: 8.4ch;
+  max-width: 8.2ch;
   margin: 0;
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: clamp(4rem, 7vw, 7rem);
+  font-size: clamp(4.4rem, 6.9vw, 6.8rem);
   font-weight: 400;
   letter-spacing: -0.045em;
   line-height: 0.88;
@@ -841,12 +860,12 @@ button:focus-visible {
 .contact-art {
   position: absolute;
   z-index: 1;
-  right: max(24px, calc((100vw - 1180px) / 2));
+  right: 0;
   bottom: 0;
-  width: clamp(19rem, 30vw, 31rem);
+  width: clamp(16rem, 24vw, 24rem);
   align-self: stretch;
-  height: min(78svh, 48rem);
-  min-height: clamp(26rem, 50vw, 43rem);
+  height: min(94%, 30rem);
+  min-height: clamp(19rem, 40vw, 28rem);
 }
 
 .contact-art img {
@@ -1012,6 +1031,12 @@ button:focus-visible {
   }
 
   .contact-art {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    justify-self: end;
+    width: min(100%, 24rem);
+    height: 24rem;
     min-height: 22rem;
     opacity: 0.9;
   }
@@ -1142,6 +1167,14 @@ button:focus-visible {
     font-size: clamp(3.6rem, 17vw, 5rem);
   }
 
+  .contact-section .section-index {
+    top: 1.75rem;
+  }
+
+  .contact-inner {
+    padding-top: 5.1rem;
+  }
+
   .contact-links a,
   .contact-links > span {
     grid-template-columns: 20px minmax(0, 1fr);
@@ -1153,7 +1186,7 @@ button:focus-visible {
   }
 
   .contact-art {
-    min-height: 18rem;
+    display: none;
   }
 
   .footer-baseline {

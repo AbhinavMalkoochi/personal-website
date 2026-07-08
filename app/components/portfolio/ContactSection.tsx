@@ -1,6 +1,8 @@
 import { Github, Mail, MapPin } from "lucide-react";
 import Image from "next/image";
 
+const email = "abhinav.malkoochi@gmail.com";
+
 export function ContactSection() {
   return (
     <footer id="contact" className="section-shell contact-section" aria-labelledby="contact-title">
@@ -14,15 +16,15 @@ export function ContactSection() {
             I&apos;m always open to talking about new ideas, interesting
             problems, or potential collaborations.
           </p>
-          <a className="contact-primary" href="mailto:hello@abhinavmalkoochi.dev">
-            hello@abhinavmalkoochi.dev
+          <a className="contact-primary" href={`mailto:${email}`}>
+            {email}
           </a>
         </div>
         <address className="contact-links">
-          <a href="mailto:hello@abhinavmalkoochi.dev">
+          <a href={`mailto:${email}`}>
             <Mail size={18} strokeWidth={1.6} aria-hidden="true" />
             <span>Email</span>
-            hello@abhinavmalkoochi.dev
+            {email}
           </a>
           <a href="https://github.com/AbhinavMalkoochi" target="_blank" rel="noopener noreferrer">
             <Github size={18} strokeWidth={1.6} aria-hidden="true" />
