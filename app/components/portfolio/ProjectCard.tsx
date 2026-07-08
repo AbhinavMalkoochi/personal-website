@@ -2,8 +2,8 @@ import Image from "next/image";
 import { type ProjectMeta } from "@/app/lib/projects";
 
 const artworkByName: Record<string, string> = {
-  "Browser Agent": "/assets/portfolio/summer/project-browser-agent.webp",
-  "MCP Code": "/assets/portfolio/summer/project-mcp-code.webp",
+  "Browser Agent": "/assets/portfolio/summer/project-browser-agent-dog.webp",
+  "MCP Code": "/assets/portfolio/summer/project-mcp-pavilion.webp",
 };
 
 interface ProjectCardProps {
