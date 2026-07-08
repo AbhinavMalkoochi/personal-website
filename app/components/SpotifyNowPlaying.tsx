@@ -160,7 +160,7 @@ export default function SpotifyNowPlaying() {
                                 )}
                             </div>
                         </div>
-
+``
                         <div className="space-y-1">
                             <div className="relative h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                                 <div

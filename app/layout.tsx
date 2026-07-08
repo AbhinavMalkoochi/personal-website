@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { Cormorant_Garamond, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import SpotifyNowPlaying from "./components/SpotifyNowPlaying";
 import { ConvexClientProvider } from "./providers/ConvexClientProvider";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -11,9 +10,17 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Abhinav Malkoochi",
-  description: "Computer Science Graduate interested in AI.",
+  description:
+    "Abhinav Malkoochi is a CS graduate from UT Dallas building software, AI tools, and thoughtful digital experiences.",
 };
 
 export default function RootLayout({
@@ -23,9 +30,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${jetbrainsMono.variable} antialiased`}>
+      <body className={`${jetbrainsMono.variable} ${cormorant.variable} antialiased`}>
         <ConvexClientProvider>
-          <SpotifyNowPlaying />
           <main className="main-content">
             {children}
           </main>
