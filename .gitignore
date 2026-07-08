@@ -24,6 +24,11 @@ servers/
 # misc
 .DS_Store
 *.pem
+*:Zone.Identifier
+
+# local generated/reference images
+/ChatGPT Image*.png
+/new website.png
 
 # debug
 npm-debug.log*
