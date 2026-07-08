@@ -1,7 +1,9 @@
 export { ContactSection } from "./ContactSection";
+export { ExperienceCard } from "./ExperienceCard";
 export { ExperienceSection } from "./ExperienceSection";
-export { FloatingGeometry } from "./FloatingGeometry";
-export { GraphicMotifs } from "./GraphicMotifs";
+export { HeaderNav } from "./HeaderNav";
+export { HeroDecor } from "./HeroDecor";
 export { HeroSection } from "./HeroSection";
+export { ProjectCard } from "./ProjectCard";
 export { ProjectSection } from "./ProjectSection";
-export { SkyBackground } from "./SkyBackground";
+export { SectionShell } from "./SectionShell";

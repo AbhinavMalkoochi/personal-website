@@ -1,48 +1,49 @@
-import { GraphicMotifs } from "./GraphicMotifs";
+import { ExperienceCard } from "./ExperienceCard";
+import { SectionShell } from "./SectionShell";
 
 const experiences = [
   {
-    company: "'Sup",
+    company: "’Sup",
     title: "Full Stack Intern",
     detail:
       "Worked on internal tools and customer-facing features across web and mobile. Shipped end-to-end features and improved dev productivity.",
+    image: "/assets/portfolio/summer/experience-sup.webp",
   },
   {
     company: "UT Dallas",
     title: "LLM Research",
     detail:
       "Researched prompt optimization, hallucination mitigation, and evaluation frameworks for large language models.",
+    image: "/assets/portfolio/summer/experience-utd.webp",
   },
   {
     company: "XNode.AI",
     title: "AI Intern",
     detail:
       "Built AI-powered workflows and backend services. Integrated models into production systems and improved inference pipelines.",
+    image: "/assets/portfolio/summer/experience-xnode.webp",
   },
 ];
 
 export function ExperienceSection() {
   return (
-    <section id="experience" className="paper-section experience-section" aria-labelledby="experience-title">
-      <GraphicMotifs tone="paper" />
-      <div className="section-inner">
+    <SectionShell id="experience" titleId="experience-title" label="02" className="paper-section experience-section">
+      <div className="section-inner experience-inner">
         <div className="section-label-row">
           <h2 id="experience-title" className="section-label">Experience</h2>
           <span aria-hidden="true" />
         </div>
-        <div className="experience-grid">
+        <div className="experience-timeline" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <div className="experience-stack">
           {experiences.map((experience, index) => (
-            <article key={experience.company} className="experience-card">
-              <span className="card-tape" aria-hidden="true" />
-              <span className="card-accent" aria-hidden="true" />
-              <div className="card-index">{String(index + 1).padStart(2, "0")}</div>
-              <h3>{experience.company}</h3>
-              <p className="role-title">{experience.title}</p>
-              <p>{experience.detail}</p>
-            </article>
+            <ExperienceCard key={experience.company} index={index} {...experience} />
           ))}
         </div>
       </div>
-    </section>
+    </SectionShell>
   );
 }

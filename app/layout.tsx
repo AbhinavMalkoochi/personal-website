@@ -1,20 +1,27 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Mono, Instrument_Serif, Inter } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "./providers/ConvexClientProvider";
 import { Analytics } from "@vercel/analytics/next";
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
 
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
   subsets: ["latin"],
   display: "swap",
-  weight: ["500", "600", "700"],
+  weight: "400",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-ibm-plex-mono",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -29,8 +36,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${jetbrainsMono.variable} ${cormorant.variable} antialiased`}>
+    <html
+      lang="en"
+      className={`${inter.variable} ${instrumentSerif.variable} ${ibmPlexMono.variable}`}
+    >
+      <body className="antialiased">
         <ConvexClientProvider>
           <main className="main-content">
             {children}
