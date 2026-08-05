@@ -1,35 +1,19 @@
 # Personal Website
 
-Personal site built with Next.js App Router and Convex-backed Spotify integration.
+Minimal personal site for projects, experience, and writing.
 
 ## Stack
 
 - Next.js 16 + React 19
-- Tailwind CSS v4 + global CSS
-- Convex (cron polling + cached now-playing state)
+- TypeScript
+- CSS
+- MDX
+- Vercel Analytics
 
-## Key App Areas
+## Content
 
-- `app/layout.tsx`: root providers and global UI layers.
-- `app/components/SpotifyNowPlaying.tsx`: hideable Spotify card with live progress.
-- `convex/spotify.ts`: token refresh, Spotify polling, normalization, and cache updates.
-- `convex/schema.ts`: Convex table schemas.
-
-## Spotify Behavior
-
-- Uses a hybrid refresh model:
-	- 5-minute safety cron on Convex.
-	- On-demand freshness checks from visible client tabs.
-- Uses viewer heartbeats to avoid aggressive polling when nobody is on the site.
-- Stores a normalized snapshot in `spotifyNowPlaying`.
-- Keeps the last known track when playback is inactive and marks `isPlaying: false`.
-- Handles missing URLs/nullable IDs safely to avoid runtime validation errors.
-- Applies lock+backoff and write suppression to reduce function/mutation churn.
-
-## Mobile and UI Notes
-
-- Spotify card is hideable and restored with a compact button.
-- Main content reserves bottom space so the card does not block content.
+- Projects: `content/projects`
+- Posts: `content/blogs`
 
 ## Local Development
 

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Instrument_Serif, Inter } from "next/font/google";
-import "./globals.css";
-import { ConvexClientProvider } from "./providers/ConvexClientProvider";
+import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -10,42 +9,39 @@ const inter = Inter({
   display: "swap",
 });
 
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  subsets: ["latin"],
-  display: "swap",
-  weight: "400",
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-ibm-plex-mono",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
-
 export const metadata: Metadata = {
-  title: "Abhinav Malkoochi",
-  description:
-    "Abhinav Malkoochi is a CS graduate from UT Dallas building software, AI tools, and thoughtful digital experiences.",
+  metadataBase: new URL("https://abhinavmalkoochi.com"),
+  title: {
+    default: "Abhinav Malkoochi",
+    template: "%s · Abhinav Malkoochi",
+  },
+  description: "Software, AI, projects, and notes by Abhinav Malkoochi.",
+  openGraph: {
+    title: "Abhinav Malkoochi",
+    description: "Software, AI, projects, and notes by Abhinav Malkoochi.",
+    url: "/",
+    siteName: "Abhinav Malkoochi",
+    type: "website",
+    images: [
+      {
+        url: "/og.png",
+        alt: "Abhinav Malkoochi — Software · AI",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Abhinav Malkoochi",
+    description: "Software, AI, projects, and notes by Abhinav Malkoochi.",
+    images: ["/og.png"],
+  },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${instrumentSerif.variable} ${ibmPlexMono.variable}`}
-    >
-      <body className="antialiased">
-        <ConvexClientProvider>
-          <main className="main-content">
-            {children}
-          </main>
-        </ConvexClientProvider>
+    <html lang="en" className={inter.variable}>
+      <body>
+        {children}
         <Analytics />
       </body>
     </html>

@@ -1,9 +1,0 @@
-export { ContactSection } from "./ContactSection";
-export { ExperienceCard } from "./ExperienceCard";
-export { ExperienceSection } from "./ExperienceSection";
-export { HeaderNav } from "./HeaderNav";
-export { HeroDecor } from "./HeroDecor";
-export { HeroSection } from "./HeroSection";
-export { ProjectCard } from "./ProjectCard";
-export { ProjectSection } from "./ProjectSection";
-export { SectionShell } from "./SectionShell";
