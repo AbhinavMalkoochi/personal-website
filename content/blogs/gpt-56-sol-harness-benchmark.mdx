@@ -1,56 +1,64 @@
 ---
-title: "One model, five coding harnesses"
-summary: "1,125 trials across Codex, Claude Code, Cursor, Pi, and OpenCode."
+title: "Five coding tools, one model"
+summary: "I ran the same model in Codex, Claude Code, Cursor, Pi, and OpenCode."
 date: "2026-08-05"
 ---
 
-I ran the same `gpt-5.6-sol` model at medium reasoning through five coding harnesses on all 225 Aider Polyglot tasks.
+I wanted to see how much the coding tool matters when the model stays the same.
 
-## Result
+I ran `gpt-5.6-sol` at medium reasoning on 225 Aider Polyglot tasks using Codex, Claude Code, Cursor, Pi, and OpenCode.
 
-| Harness | Passed | Rate |
-| --- | ---: | ---: |
-| Codex CLI | 183 / 219 | 83.6% |
-| Pi | 168 / 219 | 76.7% |
-| Cursor SDK + bridge | 167 / 219 | 76.3% |
-| Claude Code + CLIProxyAPI | 163 / 219 | 74.4% |
-| OpenCode | 163 / 219 | 74.4% |
+## Results
 
-Six tasks passed without any edit, so they stayed in the 1,125-trial matrix but were removed from the correctness denominator.
+<table>
+  <thead>
+    <tr><th>Tool</th><th>Passed</th><th>Rate</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Codex</td><td>183 / 219</td><td>83.6%</td></tr>
+    <tr><td>Pi</td><td>168 / 219</td><td>76.7%</td></tr>
+    <tr><td>Cursor</td><td>167 / 219</td><td>76.3%</td></tr>
+    <tr><td>Claude Code</td><td>163 / 219</td><td>74.4%</td></tr>
+    <tr><td>OpenCode</td><td>163 / 219</td><td>74.4%</td></tr>
+  </tbody>
+</table>
 
-Codex led every paired comparison. Its advantage over each other harness remained significant after Holm correction. The other four were not significantly different from one another.
+Codex did best. The gap between Codex and each of the other tools was statistically significant. The other four were close enough that I would not rank them from this run.
+
+The denominator is 219 because six tasks already passed before the model changed anything.
 
 ## Setup
 
-- 225 tasks × 5 harnesses
-- Same model and reasoning level
 - One attempt per task
-- 900-second limit
-- Deterministic packaged tests
-- Subscription-backed model route
+- 15-minute limit
+- The same model and reasoning level
+- The tests included with each task
 
-The Claude result measures Claude Code using an OpenAI-compatible translation layer, not a Claude model. The Cursor result measures the Cursor SDK with a community compatibility bridge, not Cursor's hosted agent.
+Claude Code used an OpenAI-compatible proxy, so this does not say anything about Claude models. Cursor used its SDK with a community bridge, not Cursor's hosted agent.
 
-## The important caveat
+## Network access
 
-I disabled each harness's dedicated web tools, but the containers could still reach the internet through shell commands.
+This was not a closed-book test.
 
-The audit found 198 external retrieval commands across 52 trials. Agents fetched public Exercism repositories, GitHub results, and search pages. This makes the experiment an **open-network harness comparison**, not a closed-book evaluation of model knowledge.
+I turned off the built-in web tools, but the agents could still use the shell to reach the public internet. I found 198 retrieval commands in 52 trials.
 
-| Harness | Flagged trials |
-| --- | ---: |
-| Codex | 24 |
-| Pi | 10 |
-| Claude Code | 9 |
-| Cursor | 7 |
-| OpenCode | 2 |
+<table>
+  <thead>
+    <tr><th>Tool</th><th>Trials with retrievals</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Codex</td><td>24</td></tr>
+    <tr><td>Pi</td><td>10</td></tr>
+    <tr><td>Claude Code</td><td>9</td></tr>
+    <tr><td>Cursor</td><td>7</td></tr>
+    <tr><td>OpenCode</td><td>2</td></tr>
+  </tbody>
+</table>
 
-As a descriptive check, I removed every task where any harness attempted external retrieval. On the remaining 187 paired tasks, Codex still led with 82.9%, followed by Cursor at 79.7%, Pi at 79.1%, OpenCode at 78.6%, and Claude Code at 77.0%.
+I also removed every task where any tool tried to fetch something. That left 187 tasks. Codex still came first at 82.9%, followed by Cursor at 79.7%, Pi at 79.1%, OpenCode at 78.6%, and Claude Code at 77.0%.
 
-That check is post-hoc and behavior-conditioned, so the complete result remains primary.
+That second result is only a check. The full open-network result above is the main one.
 
-## What I learned
+## Next
 
-The harness matters even when the model does not change. Tool design, context management, edit strategy, and recovery behavior produced measurable differences.
-
-The clean next experiment is simple: block all outbound traffic except the local model gateway and rerun the affected paired tasks.
+The tool around the model clearly changes the result. The next run should block outbound traffic completely.
