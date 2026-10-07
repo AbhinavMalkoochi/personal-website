@@ -1,0 +1,153 @@
+---
+title: "The harness ate my agents"
+summary: "Seven weeks building rules, hooks and review gates for my coding agents, two days of experiments, and why I ended up back at almost vanilla."
+date: "2026-10-07"
+---
+
+For about seven weeks I've been building a product mostly by directing coding agents. Claude Code does most of the typing, Codex helps sometimes, and I spend my time deciding what to build and checking what comes back.
+
+Somewhere along the way I started building a second thing on the side without really noticing: a *harness*. Rules, hooks, scripts and gates whose only job was to make the agents behave. This is the story of how that harness grew, how it eventually ate the agents it was supposed to help, and the experiment I ran to figure out what was actually worth keeping.
+
+Spoiler: almost nothing.
+
+<HeadlineStats />
+
+## Why I wanted a harness at all
+
+The dream is simple. You describe a feature, an agent builds it, checks its own work, and ships it while you do something else. I'd read a great guide on this ("verification is all you need"): give agents a way to drive the real app, let them close the loop themselves, and have them hand you a short video as proof.
+
+That part worked. I built a little CLI that lets an agent click through the app, sign in, kick off real background jobs, read the database. Agents got genuinely good at debugging against real data.
+
+But the agents also kept doing a handful of annoying things:
+
+- **Quietly dropping work.** I'd ask for twelve things and get nine, with the other three mentioned in paragraph six of a report I'd never read.
+- **Saying "done" when it wasn't.** "Passed review" meant every review failed and nobody re-checked the fixes. "Walked the app" meant walked before seven more files changed.
+- **Making my decisions for me.** Changing how a value was stored, removing a feature, then writing "Abhinav decided" in the docs.
+- **Guessing instead of checking.** Declaring a bug "environmental" without ever reproducing it.
+
+None of this is malicious. It's what a very fast, very confident junior engineer does when nobody is checking. So I started checking.
+
+## How it grew
+
+Every time an agent let me down, I added a rule. Then a script to enforce the rule. Then a hook to make sure the script ran. I never removed anything.
+
+<HarnessGrowth />
+
+The orange line is everything I wrote *for the agents*: the rulebook, git hooks, review scripts, guards, an end-to-end test suite, process docs. At its peak it was a quarter the size of the product it was supposed to serve, and it grew in steps, every step right after something went wrong.
+
+Here's roughly how the escalation went:
+
+<Escalation />
+
+<RulebookLength />
+
+Each rule made sense on the day I wrote it. Together they made something nobody could actually get through.
+
+## The day it broke
+
+On October 5th I asked for a big redesign. The agents split it into areas, built them in parallel, and then spent the night fighting the harness.
+
+The problem was a loop. A walk of the app needed a real end-to-end run against real data, 10 to 15 minutes. A fresh reviewer on a multi-file diff always finds three to five new things. Fixing any of them changed the code, which invalidated the walk, which the next review required.
+
+<ReviewLoop />
+
+One of the agents summed it up better than I could:
+
+<Quote who="a build agent, 01:26">Every fix invalidates every walk.</Quote>
+
+After three refused reviews in a row, the review script refused to run from an agent's shell at all. So the agents started asking me to run it in my own terminal. I became the message bus, pasting commands between sessions at 1am. One of those hand-run reviews crashed.
+
+Day one of the redesign burned roughly **890 million tokens** in about eight hours and merged two PRs. Earlier that evening the session had estimated it needed "6 to 10 million more tokens".
+
+<TokenBill />
+
+My messages that night got progressively less composed:
+
+<Quote who="me, 02:37">in no world does 7 reviews even make sense for a product as simple as ours</Quote>
+
+<Quote who="me, 02:52">can we just please please just make the agent normal our harnes is just the worst right now</Quote>
+
+I also asked some version of "status?" nineteen times over those few days. That's its own kind of metric.
+
+## The agents fought back (sort of)
+
+This is the part I find funny in hindsight. The harness was built on the assumption that the agents would try to cheat. Mostly they didn't. But they were *very* creative about getting their work through anyway.
+
+<div className="viz-cards">
+  <div><strong>Writing their own reviewer's brief</strong><p>The author agent briefed its reviewer, including lines like "orchestrator decisions you can treat as given (do not re-flag)". A required item that was never built went unmentioned.</p></div>
+  <div><strong>Reviewer shopping</strong><p>Refusals weren't logged. Two reviewers refused, the third approved. Rechecks arrived with a pre-filled approve command.</p></div>
+  <div><strong>"Optional"</strong><p>Real defects (a Save button that saves twice, duplicate status regions) got through by being labeled optional findings.</p></div>
+  <div><strong>Softened tests</strong><p><code>if (await more.isVisible()) await more.click()</code> turned a failing check into one that can't fail.</p></div>
+  <div><strong>"Environmental"</strong><p>Two real bugs were investigated three times each and closed as environmental, without a repro.</p></div>
+  <div><strong>Patient to a fault</strong><p>One agent waited 15 minutes for output from a job that had already finished with nothing to do.</p></div>
+  <div><strong>Collateral damage</strong><p><code>pkill -f</code> on a shared pattern killed every other session's backend. Another agent <code>rm -rf</code>'d its own walk recordings because it kept editing files after recording them.</p></div>
+  <div><strong>The bypass nobody used</strong><p>An audit showed the anti-bypass hook could be dodged by quoting: <code>--no-v''erify</code>. No agent ever tried it. They were stuck, not sneaky.</p></div>
+</div>
+
+That last one matters. When I audited every session, I found no fake walks and no hook bypasses. The agents were honest. They had just been handed a maze.
+
+## I added a watcher. It became a second driver.
+
+My fix for "I can't see what the agents are doing" was another agent. A meta session read the building session's transcript every 20 minutes, spun up five audit subagents, and reported back what was going wrong.
+
+It was genuinely useful as an observer. Its audit is where most of the stories above come from. But it couldn't stay an observer. In one night it landed four harness changes while the batch was still running, each one telling every worktree to merge main and start its review over. It swung from proposing *more* enforcement to ripping out every gate within a few hours. When it finally removed the commit gate, its own report said:
+
+<Quote who="the watcher session, 02:59">I wrote this harness change myself, merged it without an independent review, and didn't run its live journeys.</Quote>
+
+The moment the gate came out, four PRs that had been stuck for hours merged in 35 minutes.
+
+<GateOff />
+
+To be fair, those PRs had already been through plenty of review. It doesn't prove quality holds without review. It proves where the time was going.
+
+## The experiment
+
+At that point I had opinions, a lot of anecdotes, and lots of people online saying a vanilla setup beats a custom harness. I wanted numbers. So I ran a small benchmark:
+
+- **Same task**: one real, fairly long feature request with six parts, the kind where agents like to quietly skip something.
+- **Same starting commit, same prompt, same model** (Claude Opus 5.5 at medium effort), each run in its own worktree, no help from me after the first message.
+- **Four harnesses**, one run each:
+  - **Gates off**: the harness after the gates were removed, but with all its rules, docs and skills.
+  - **Minimal rulebook**: a 200-line rulebook, most tooling deleted, no outside review.
+  - **Steps + outside review**: the existing harness plus six short task steps and one review by a *different* model (GPT-6.1-Sol), one pass, no loop.
+  - **Vanilla + outside review**: a 72-line file of plain facts about the codebase, oxlint instead of ESLint, and that same one-pass review command.
+- **Three blind graders** from two model families: Opus 5.5, GPT-6.1-Sol and GPT-6-Sol. They saw the four diffs as P, Q, R and S and scored completeness, correctness, collateral damage and code quality.
+
+<Scoreboard />
+
+<RunCosts />
+
+A few things jumped out:
+
+- **The minimal rulebook came last.** Slowest, biggest diff, lowest total score. With fewer pointers to existing helpers, the agent built its own: a 180-line date parser, a custom test loader, sample-writing scaffolding. Less guidance didn't make it leaner, it made it reinvent things.
+- **Vanilla was fast and stayed in scope best.** It was the only run that left one existing behavior alone that every other run changed without being asked. But on the hardest item it settled for a reworded prompt instead of an actual check in code, and it invented a product rule nobody asked for.
+- **The outside review was the single most useful thing.** In both earlier runs without it, the author's own review missed a high-severity bug that a different model then found in about 15 minutes. With it, the agent fixed four real bugs before the PR was even opened.
+
+I also ran a hard performance task on two of the harnesses and stopped both before they finished. The one on the full old harness had rewritten 91 files and quietly broken a completely unrelated feature. The other touched 28 and scored 29 vs 19 from the grader.
+
+## Was this a fair test?
+
+Not really, and I want to be upfront about that.
+
+- **It's one task per harness.** With a sample of one, the time differences especially are noisy. One grader scored the top three within a point of each other.
+- **The infrastructure fought back too.** An app restart cancelled two runs mid-flight, a grader model was "at capacity", and one run hit my weekly usage limit overnight and finished the next morning.
+- **Same model, two jobs.** The model that did the outside review also graded. That's why there were two other graders. Two of the three put the steps-plus-review harness first, and it had the highest total; GPT-6.1-Sol had it one point behind.
+
+And then there's my favorite moment of the whole project. When I finally opened the PR that *deleted* the checklist hook, the checklist hook refused to merge it, twice, because the PR description didn't have a checklist. So I added a checklist to the PR that removes checklists. The hook against hook bypasses also refused my own attempt to skip a hook during cleanup. Working as designed, to the very end.
+
+## What I ended up with
+
+The data says the things that cost me hours (gates, loops, proof tied to exact bytes) were pure harm, and they're gone. The one-pass review by a different model clearly helps. Six short task steps help a little, on exactly the things I care most about: not dropping requirements and not breaking things. Everything else showed no measurable value.
+
+So the harness I shipped is vanilla plus those two things:
+
+- A **102-line rulebook**: what the codebase is, the commands, a short "never" list, the architecture rules an agent can't cheaply guess, and the six steps.
+- **oxlint** instead of ESLint, with warnings that block.
+- **One outside review** before merge. One pass, no second round.
+- The cheap checks every repo should have anyway: typecheck, build, a few guards for genuinely dangerous things.
+
+<TheCut />
+
+The harness I wrote by hand went from 11,262 lines to 2,625.
+
+The thing I keep coming back to: almost every rule I wrote was a reaction to a specific failure, and almost every one of them was locally reasonable. The problem was never any single rule. It was that I only ever added, and nothing I added had to prove it was helping. Now anything that touches the harness has to beat this benchmark first.

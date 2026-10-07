@@ -4,6 +4,10 @@ import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import { getAllBlogs, getBlog } from "@/app/lib/blogs";
+import { Quote } from "@/app/blog/viz/charts";
+import * as harness from "@/app/blog/harness/figures";
+
+const components = { Quote, ...harness };
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -28,7 +32,7 @@ export default async function BlogPost({ params }: Props) {
         <h1>{post.meta.title}</h1>
         <p>{post.meta.summary}</p>
       </header>
-      <article className="prose"><MDXRemote source={post.content} /></article>
+      <article className="prose"><MDXRemote source={post.content} components={components} /></article>
     </main>
   );
 }
