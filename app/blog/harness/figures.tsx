@@ -215,11 +215,11 @@ export function HeadlineStats() {
 
 export function Escalation() {
   return <Timeline steps={[
-  { when: "Sep 2", title: "A gate before every push", body: "Lint, typecheck, build, plus a 'slop guard' that refuses TODOs, skipped tests and unexplained suppressions. Honestly great. This one stayed." },
+  { when: "Sep 2", title: "A gate before every push", body: "Lint, typecheck and build before every push, plus a guard that refuses TODOs, skipped tests and unexplained lint suppressions. This one stayed." },
   { when: "Sep 4", title: "A hook that won't let the agent stop", body: "A Claude Code Stop hook runs the checks at the end of every turn and blocks the agent from finishing while anything is red." },
-  { when: "Sep 23", title: "A reviewer must approve every commit", body: "An independent reviewer agent has to sign off, recorded against a hash of the staged diff, or the commit is refused. Same day: unit tests deleted. Real end-to-end proof only.", tone: "bad" },
-  { when: "Sep 28", title: "The rulebook hits 489 lines", body: "AGENTS.md, which every agent reads every turn, now has a dozen dated rulings like case law. CI gets deleted the same day." },
-  { when: "Sep 29", title: "A hook against hook bypasses", body: "A PreToolUse hook refuses --no-verify, skip flags, and even typing the path of the review record by hand." },
+  { when: "Sep 23", title: "A reviewer must approve every commit", body: "A separate reviewer agent has to approve every commit, recorded against a hash of the staged diff. The same day, unit tests were replaced with end-to-end checks only.", tone: "bad" },
+  { when: "Sep 28", title: "The rulebook hits 489 lines", body: "The rulebook every agent reads on every turn reaches 489 lines, including a dozen dated rulings. CI is removed the same day." },
+  { when: "Sep 29", title: "A hook against hook bypasses", body: "A hook refuses --no-verify, skip flags, and writing the review record by hand." },
   { when: "Oct 3", title: "Prove the exact bytes", body: "A commit is refused unless a recorded walk of the app ran the exact staged contents of every changed file.", tone: "bad" },
   { when: "Oct 5", title: "A checklist hook on merges", body: "Merging a PR is refused while its checklist has an unticked item, unless I'm quoted dropping it.", tone: "bad" },
 ]} />;
